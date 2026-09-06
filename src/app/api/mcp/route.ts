@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSites, getSettings, getPosts, savePost, Site, PostRecord, getGscConfig, saveGscLog, getBacklinks } from '@/lib/db';
+import { getSites, getSettings, getPosts, savePost, getGscConfig, saveGscLog, getBacklinks } from '@/lib/db';
 import { submitToGoogleIndexing, querySearchAnalytics } from '@/lib/gsc';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
@@ -506,10 +506,11 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
       id,
       error: { code: -32601, message: `Method ${method} not implemented.` },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({
       jsonrpc: '2.0',
-      error: { code: -32603, message: error.message || 'Internal error' },
+      error: { code: -32603, message: errorMsg || 'Internal error' },
     }, { status: 500 });
   }
 }

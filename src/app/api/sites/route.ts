@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     saveSites(sites);
     
     return NextResponse.json(newSite);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to save site' }, { status: 500 });
   }
 }
@@ -44,7 +44,7 @@ export async function DELETE(request: Request) {
     saveSites(sites);
     
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to delete site' }, { status: 500 });
   }
 }

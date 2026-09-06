@@ -177,7 +177,7 @@ export default function AutoBlogger() {
       clearTimeout(timeoutId);
       if (timerRef.current) clearInterval(timerRef.current);
 
-      let data: Record<string, unknown> = {};
+      let data: any = {};
       try {
         data = await res.json();
       } catch {
@@ -205,7 +205,7 @@ export default function AutoBlogger() {
       clearTimeout(timeoutId);
       if (timerRef.current) clearInterval(timerRef.current);
       setStatus('error');
-      if (err.name === 'AbortError') {
+      if ((err as Error).name === 'AbortError') {
         setStatusMsg('Generation took longer than 5 minutes. The Antigravity CLI process may need to be restarted.');
       } else {
         const errorMsg = err instanceof Error ? err.message : String(err);

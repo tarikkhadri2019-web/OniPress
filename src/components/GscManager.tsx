@@ -168,7 +168,7 @@ export default function GscManager() {
       const data = await res.json();
       if (data.success) {
         setFeedback({ type: 'success', msg: data.message });
-        fetchData();
+        loadData();
       } else {
         setFeedback({ type: 'error', msg: data.lastError || data.error || 'Failed to verify credentials' });
       }
@@ -202,7 +202,7 @@ export default function GscManager() {
       if (data.success) {
         setFeedback({ type: 'success', msg: data.message || 'Indexing request submitted to Google!' });
         setTestUrl('');
-        fetchData();
+        loadData();
       } else {
         setFeedback({ type: 'error', msg: data.error || data.message || 'Indexing request rejected by Google' });
       }
