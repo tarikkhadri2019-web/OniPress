@@ -323,8 +323,22 @@ function sanitizeAndEnforceSeo(
         .map(h => `<li style="margin-bottom:8px;"><a href="#${h.id}" style="color:#2563eb; text-decoration:none; font-weight:500;">${h.title}</a></li>`)
         .join('');
 
+      const headingsJson = headings.map((h, i) => ({
+        key: `heading-${i}`,
+        link: `#${h.id}`,
+        level: 2,
+        content: h.title,
+        disable: false,
+      }));
+
+      const blockAttrs = JSON.stringify({
+        title: 'Table of Contents',
+        headings: headingsJson,
+        excludeHeadings: [],
+      });
+
       const tocBlock = `
-<!-- wp:rank-math/toc-block {"title":"Table of Contents"} -->
+<!-- wp:rank-math/toc-block ${blockAttrs} -->
 <div class="wp-block-rank-math-toc-block" id="rank-math-toc" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px 24px; margin:24px 0;">
   <p style="font-weight:700; font-size:16px; margin:0 0 12px 0; color:#0f172a; display:flex; items-center; gap:8px;">
     <span>📑</span> Table of Contents
