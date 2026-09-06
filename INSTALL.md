@@ -116,7 +116,7 @@ If you get a response, Gemini AI is working with your Gmail ✅
 
 ### Option A — Download as ZIP (Easiest, no Git needed)
 
-1. Go to the OniPress GitHub page: **https://github.com/your-username/onipress**
+1. Go to the OniPress GitHub page: **https://github.com/tarikkhadri2019-web/OniPress**
 2. Click the green **Code** button
 3. Click **Download ZIP**
 4. Extract the ZIP to a folder, for example: `C:\Users\YourName\Desktop\onipress`
@@ -124,8 +124,8 @@ If you get a response, Gemini AI is working with your Gmail ✅
 ### Option B — Clone with Git (If you have Git installed)
 
 ```bash
-git clone https://github.com/your-username/onipress.git
-cd onipress
+git clone https://github.com/tarikkhadri2019-web/OniPress.git
+cd OniPress
 ```
 
 ### Install OniPress dependencies

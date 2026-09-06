@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/onipress"
+    "url": "https://github.com/tarikkhadri2019-web/OniPress.git"
   },
   "scripts": {
     "dev": "next dev",

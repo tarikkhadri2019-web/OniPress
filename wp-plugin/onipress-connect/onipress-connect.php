@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: OniPress Connect
- * Plugin URI:  https://github.com/your-org/onipress
+ * Plugin URI:  https://github.com/tarikkhadri2019-web/OniPress
  * Description: Connects your WordPress site to the OniPress universal MCP AI dashboard. Generates a secure Bearer token so OniPress can create posts, set RankMath/Yoast SEO data, and attach featured images automatically.
  * Version:     1.1.0
  * Author:      OniPress
- * Author URI:  https://github.com/your-org/onipress
+ * Author URI:  https://github.com/tarikkhadri2019-web/OniPress
  * License:     MIT
  * Text Domain: onipress-connect
  *

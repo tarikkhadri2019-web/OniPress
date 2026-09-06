@@ -85,8 +85,8 @@ agy --print "Hello, respond with: OK" --dangerously-skip-permissions
 
 ```bash
 # Clone the repository
-git clone https://github.com/tarik7099/onipress.git
-cd onipress
+git clone https://github.com/tarikkhadri2019-web/OniPress.git
+cd OniPress
 
 # Install dependencies
 npm install
@@ -229,5 +229,5 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 ---
 
 <div align="center">
-  <sub>Built with precision for the global open-source community by <a href="https://github.com/tarik7099">tarik7099</a>.</sub>
+  <sub>Built with precision for the global open-source community by <a href="https://github.com/tarikkhadri2019-web">tarikkhadri2019-web</a>.</sub>
 </div>
