@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getSites, getSettings, getPosts, savePost, getGscConfig, saveGscLog, getBacklinks } from '@/lib/db';
 import { submitToGoogleIndexing, querySearchAnalytics } from '@/lib/gsc';
+import { generateObject, generateText } from 'ai';
+import { z } from 'zod';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 const MCP_SERVER_INFO = {
   name: 'onipress-mcp-server',
