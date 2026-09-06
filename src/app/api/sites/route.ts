@@ -14,10 +14,10 @@ export async function POST(request: Request) {
     // Add new site
     const newSite: Site = {
       id: uuidv4(),
-      name: data.name,
-      url: data.url,
-      username: data.username,
-      applicationPassword: data.applicationPassword,
+      name: (data.name || '').trim(),
+      url: (data.url || '').trim().replace(/\/+$/, ''),
+      username: (data.username || '').trim(),
+      applicationPassword: (data.applicationPassword || '').trim(),
       tags: data.tags || [],
     };
     

@@ -525,9 +525,9 @@ Generate a comprehensive, high-ranking article:
 
     // 7. Push to WordPress via OniPress Connect Plugin
     const wpBaseUrl = site.url.replace(/\/$/, '');
-    const oniPressApiUrl = `${wpBaseUrl}/wp-json/onipress/v1/posts`;
+    let oniPressApiUrl = `${wpBaseUrl}/wp-json/onipress/v1/posts`;
 
-    const wpRes = await fetch(oniPressApiUrl, {
+    let wpRes = await fetch(oniPressApiUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${site.applicationPassword}`,
@@ -536,6 +536,23 @@ Generate a comprehensive, high-ranking article:
       body: JSON.stringify(wpPayload),
       signal: AbortSignal.timeout(60_000),
     });
+
+    // Fallback for LiteSpeed/plain permalinks if /wp-json/ is 404
+    if (wpRes.status === 404) {
+      const fallbackApiUrl = `${wpBaseUrl}/index.php?rest_route=/onipress/v1/posts`;
+      const fallbackRes = await fetch(fallbackApiUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${site.applicationPassword}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(wpPayload),
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (fallbackRes.ok || fallbackRes.status !== 404) {
+        wpRes = fallbackRes;
+      }
+    }
 
     if (!wpRes.ok) {
       const wpErrorText = await wpRes.text();
