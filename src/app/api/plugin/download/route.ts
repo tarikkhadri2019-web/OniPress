@@ -127,7 +127,7 @@ export async function GET() {
       // Non-blocking in read-only environments
     }
 
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
