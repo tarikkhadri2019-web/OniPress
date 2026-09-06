@@ -111,8 +111,8 @@ add_action('rest_api_init', function () {
 // ─────────────────────────────────────────────
 // 3. AUTHENTICATION — Bearer Token Check
 // ─────────────────────────────────────────────
-function onipress_check_token(WP_REST_Request $request): bool|WP_Error {
-    $auth   = $request->get_header('Authorization');
+function onipress_check_token($request) {
+    $auth   = is_object($request) && method_exists($request, 'get_header') ? $request->get_header('Authorization') : '';
     $token  = get_option(ONIPRESS_OPTION_TOKEN);
 
     if (empty($auth) || !preg_match('/^Bearer\s+(.+)$/i', $auth, $matches)) {
@@ -137,7 +137,7 @@ function onipress_check_token(WP_REST_Request $request): bool|WP_Error {
 // ─────────────────────────────────────────────
 // 4. MCP (MODEL CONTEXT PROTOCOL) HANDLER
 // ─────────────────────────────────────────────
-function onipress_mcp_handler(WP_REST_Request $request): WP_REST_Response {
+function onipress_mcp_handler($request) {
     $tools = [
         [
             'name'        => 'onipress_create_post',
@@ -205,7 +205,7 @@ function onipress_mcp_handler(WP_REST_Request $request): WP_REST_Response {
 // ─────────────────────────────────────────────
 
 /** Ping — dashboard uses this to verify the connection. */
-function onipress_ping(): WP_REST_Response {
+function onipress_ping() {
     return new WP_REST_Response([
         'status'  => 'ok',
         'message' => 'OniPress Connect is active and connected.',
@@ -216,7 +216,7 @@ function onipress_ping(): WP_REST_Response {
 }
 
 /** Site Info — returns basic WP site metadata. */
-function onipress_site_info(): WP_REST_Response {
+function onipress_site_info() {
     $plugins  = get_option('active_plugins', []);
     $has_rank = in_array('seo-by-rank-math/rank-math.php', $plugins, true);
     $has_yoast = in_array('wordpress-seo/wp-seo.php', $plugins, true);
@@ -232,7 +232,7 @@ function onipress_site_info(): WP_REST_Response {
 }
 
 /** Helper to download and attach image from URL */
-function onipress_attach_image_from_url(string $image_url, string $title, int $post_id = 0): int|WP_Error {
+function onipress_attach_image_from_url($image_url, $title, $post_id = 0) {
     require_once ABSPATH . 'wp-admin/includes/media.php';
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -255,7 +255,7 @@ function onipress_attach_image_from_url(string $image_url, string $title, int $p
 }
 
 /** Create Post — core OniPress ability. */
-function onipress_create_post(WP_REST_Request $request): WP_REST_Response|WP_Error {
+function onipress_create_post($request) {
     // Handle categories
     $category_ids = [];
     if (!empty($request['category_names']) && is_array($request['category_names'])) {
@@ -386,7 +386,7 @@ function onipress_create_post(WP_REST_Request $request): WP_REST_Response|WP_Err
 }
 
 /** Delete Post */
-function onipress_delete_post(WP_REST_Request $request): WP_REST_Response|WP_Error {
+function onipress_delete_post($request) {
     $post_id = (int)$request['id'];
     $result  = wp_delete_post($post_id, true);
     if (!$result) {
@@ -396,7 +396,7 @@ function onipress_delete_post(WP_REST_Request $request): WP_REST_Response|WP_Err
 }
 
 /** Upload image to WordPress Media Library from a URL. */
-function onipress_upload_media_from_url(WP_REST_Request $request): WP_REST_Response|WP_Error {
+function onipress_upload_media_from_url($request) {
     $image_url = esc_url_raw($request['image_url']);
     $title     = sanitize_text_field($request['title'] ?? basename($image_url));
 
@@ -413,7 +413,7 @@ function onipress_upload_media_from_url(WP_REST_Request $request): WP_REST_Respo
 }
 
 /** Get all categories. */
-function onipress_get_categories(): WP_REST_Response {
+function onipress_get_categories() {
     $cats = get_categories(['hide_empty' => false]);
     $out  = [];
     foreach ($cats as $cat) {
@@ -435,7 +435,7 @@ add_action('admin_menu', function () {
     );
 });
 
-function onipress_settings_page(): void {
+function onipress_settings_page() {
     $token    = get_option(ONIPRESS_OPTION_TOKEN, '');
     $site_url = get_bloginfo('url');
 
