@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Play, Pause, Plus, Target, Sparkles, Globe, Calendar, 
-  CheckCircle2, Clock, AlertCircle, ExternalLink, Trash2, 
-  ChevronDown, ChevronUp, RefreshCw, Zap, ArrowRight
+  CheckCircle2, AlertCircle, ExternalLink, Trash2, 
+  ChevronDown, ChevronUp, RefreshCw, Zap
 } from 'lucide-react';
 import { Site, Campaign, TopicIdea } from '@/lib/db';
 
@@ -28,13 +28,20 @@ export default function CampaignsManager() {
   // Manual topic add form
   const [topicInputs, setTopicInputs] = useState<{ [campaignId: string]: { title: string; focusKeyword: string } }>({});
 
+  const fetchCampaignsData = async () => {
+    const [sitesRes, campsRes] = await Promise.all([
+      fetch('/api/sites'),
+      fetch('/api/campaigns')
+    ]);
+    const sitesData = await sitesRes.json();
+    const campsData = await campsRes.json();
+    return { sitesData, campsData };
+  };
+
   const loadData = () => {
     setIsLoading(true);
-    Promise.all([
-      fetch('/api/sites').then(r => r.json()),
-      fetch('/api/campaigns').then(r => r.json())
-    ])
-      .then(([sitesData, campsData]) => {
+    fetchCampaignsData()
+      .then(({ sitesData, campsData }) => {
         const sitesArr = Array.isArray(sitesData) ? sitesData : [];
         const campsArr = Array.isArray(campsData) ? campsData : [];
         setSites(sitesArr);
@@ -51,7 +58,21 @@ export default function CampaignsManager() {
   };
 
   useEffect(() => {
-    loadData();
+    fetchCampaignsData()
+      .then(({ sitesData, campsData }) => {
+        const sitesArr = Array.isArray(sitesData) ? sitesData : [];
+        const campsArr = Array.isArray(campsData) ? campsData : [];
+        setSites(sitesArr);
+        setCampaigns(campsArr);
+        if (sitesArr.length > 0 && !selectedSiteId) {
+          setSelectedSiteId(sitesArr[0].id);
+        }
+        if (campsArr.length > 0 && !expandedCampaignId) {
+          setExpandedCampaignId(campsArr[0].id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   const saveCampaignToServer = async (camp: Campaign) => {
@@ -177,10 +198,11 @@ export default function CampaignsManager() {
       setCampaigns(prev => prev.map(c => c.id === campaign.id ? finalCampaign : c));
       await saveCampaignToServer(finalCampaign);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Topic generation error:', err);
+      const errorMsg = err instanceof Error ? err.message : String(err);
       const failedTopics = campaign.topics.map(t => 
-        t.id === topic.id ? { ...t, status: 'Failed' as const, error: err.message || 'Failed' } : t
+        t.id === topic.id ? { ...t, status: 'Failed' as const, error: errorMsg || 'Failed' } : t
       );
       const failedCampaign = { ...campaign, topics: failedTopics };
       setCampaigns(prev => prev.map(c => c.id === campaign.id ? failedCampaign : c));

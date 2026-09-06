@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { HelpCircle, BookOpen, Terminal, CheckCircle2, MessageSquare, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
+import { HelpCircle, BookOpen, Terminal, ShieldCheck, Zap } from 'lucide-react';
 
 export default function SupportCenter() {
   const [copiedCmd, setCopiedCmd] = useState('');

@@ -29,7 +29,8 @@ export async function POST(request: Request) {
 
     const data = await res.json();
     return NextResponse.json({ connected: true, ...data });
-  } catch (e: any) {
-    return NextResponse.json({ connected: false, error: e.message }, { status: 200 });
+  } catch (e: unknown) {
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ connected: false, error: errorMsg }, { status: 200 });
   }
 }

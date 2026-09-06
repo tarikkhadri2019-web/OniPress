@@ -22,8 +22,9 @@ export async function POST(request: Request) {
     };
     savePost(newPost);
     return NextResponse.json(newPost);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -36,7 +37,8 @@ export async function DELETE(request: Request) {
     }
     deletePost(id);
     return NextResponse.json({ success: true, deletedId: id });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

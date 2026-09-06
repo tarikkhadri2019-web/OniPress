@@ -78,27 +78,47 @@ export default function GscManager() {
   const [showGuide, setShowGuide] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/gsc');
-      const data = await res.json();
-      if (data.success) {
-        setConfig(data.config || {});
-        setLogs(data.logs || []);
-        setPerformance(data.livePerformance || null);
-        setPerfError(data.performanceError || null);
-      }
-    } catch {
-      setFeedback({ type: 'error', msg: 'Failed to load Search Console configuration' });
-    } finally {
-      setLoading(false);
-    }
+  const fetchGscData = async () => {
+    const res = await fetch('/api/gsc');
+    return res.json();
   };
+
+  const loadData = () => {
+    setLoading(true);
+    fetchGscData()
+      .then(data => {
+        if (data.success) {
+          setConfig(data.config || {});
+          setLogs(data.logs || []);
+          setPerformance(data.livePerformance || null);
+          setPerfError(data.performanceError || null);
+        }
+      })
+      .catch(() => {
+        setFeedback({ type: 'error', msg: 'Failed to load Search Console configuration' });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchGscData()
+      .then(data => {
+        if (data.success) {
+          setConfig(data.config || {});
+          setLogs(data.logs || []);
+          setPerformance(data.livePerformance || null);
+          setPerfError(data.performanceError || null);
+        }
+      })
+      .catch(() => {
+        setFeedback({ type: 'error', msg: 'Failed to load Search Console configuration' });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   const handleJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -152,8 +172,9 @@ export default function GscManager() {
       } else {
         setFeedback({ type: 'error', msg: data.lastError || data.error || 'Failed to verify credentials' });
       }
-    } catch (err: any) {
-      setFeedback({ type: 'error', msg: err?.message || 'Error saving settings' });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setFeedback({ type: 'error', msg: errorMsg || 'Error saving settings' });
     } finally {
       setLoading(false);
     }
@@ -185,8 +206,9 @@ export default function GscManager() {
       } else {
         setFeedback({ type: 'error', msg: data.error || data.message || 'Indexing request rejected by Google' });
       }
-    } catch (err: any) {
-      setFeedback({ type: 'error', msg: err?.message || 'Failed to submit indexing request' });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setFeedback({ type: 'error', msg: errorMsg || 'Failed to submit indexing request' });
     } finally {
       setIndexingLoading(false);
     }
@@ -224,7 +246,7 @@ export default function GscManager() {
             {showGuide ? 'Hide Setup Guide' : 'Setup Guide (5 Mins)'}
           </button>
           <button
-            onClick={fetchData}
+            onClick={loadData}
             disabled={loading}
             className="p-2 rounded-lg border border-white/10 text-[#a09070] hover:text-white hover:bg-white/5 transition-all"
             title="Refresh Status"

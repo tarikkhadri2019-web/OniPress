@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, ExternalLink, Calendar, CheckCircle2, Search, Trash2 } from 'lucide-react';
+import { FileText, ExternalLink, Calendar, Search, Trash2 } from 'lucide-react';
 import { PostRecord } from '@/lib/db';
 
 export default function ContentManager() {

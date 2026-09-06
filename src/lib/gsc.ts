@@ -152,12 +152,13 @@ export async function submitToGoogleIndexing(
       message: `Googlebot crawling requested at ${data.urlNotificationMetadata?.latestUpdate?.notifyTime || 'now'}`,
       notifyTime: data.urlNotificationMetadata?.latestUpdate?.notifyTime,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     return {
       success: false,
       url,
       type,
-      message: err?.message || 'Indexing request failed',
+      message: errorMsg || 'Indexing request failed',
     };
   }
 }

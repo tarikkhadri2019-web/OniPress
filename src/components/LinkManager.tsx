@@ -22,21 +22,24 @@ export default function LinkManager() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const fetchLinks = async () => {
+  const fetchLinksData = async () => {
+    const res = await fetch('/api/backlinks');
+    return res.json();
+  };
+
+  const loadLinks = () => {
     setLoading(true);
-    try {
-      const res = await fetch('/api/backlinks');
-      const data = await res.json();
-      setLinks(Array.isArray(data) ? data : []);
-    } catch {
-      setLinks([]);
-    } finally {
-      setLoading(false);
-    }
+    fetchLinksData()
+      .then(data => setLinks(Array.isArray(data) ? data : []))
+      .catch(() => setLinks([]))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchLinks();
+    fetchLinksData()
+      .then(data => setLinks(Array.isArray(data) ? data : []))
+      .catch(() => setLinks([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const handleAddLink = async (e: React.FormEvent) => {
@@ -64,14 +67,15 @@ export default function LinkManager() {
         setAnchorText('');
         setTargetKeyword('');
         setMessage({ type: 'success', text: 'Backlink added! It will now be automatically injected into generated posts.' });
-        fetchLinks();
+        loadLinks();
         setTimeout(() => setMessage(null), 4000);
       } else {
         const err = await res.json();
         setMessage({ type: 'error', text: err.error || 'Failed to save link.' });
       }
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Network error.' });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setMessage({ type: 'error', text: errorMsg || 'Network error.' });
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +91,7 @@ export default function LinkManager() {
           active: !link.active,
         }),
       });
-      fetchLinks();
+      loadLinks();
     } catch (err) {
       console.error(err);
     }
@@ -97,7 +101,7 @@ export default function LinkManager() {
     if (!confirm('Remove this backlink from automatic injection?')) return;
     try {
       await fetch(`/api/backlinks?id=${id}`, { method: 'DELETE' });
-      fetchLinks();
+      loadLinks();
     } catch (err) {
       console.error(err);
     }
@@ -218,7 +222,7 @@ export default function LinkManager() {
               <label className="text-[10px] font-semibold text-[#a09070] uppercase">Link Type</label>
               <select
                 value={type}
-                onChange={e => setType(e.target.value as any)}
+                onChange={e => setType(e.target.value as 'internal' | 'external')}
                 className="w-full px-3 py-2 text-xs rounded-xl text-white bg-black/60 border border-white/10 focus:outline-none focus:border-[#ff7a18]"
               >
                 <option value="internal">Internal Link (Own Site)</option>

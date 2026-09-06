@@ -96,8 +96,9 @@ async function generateIdeImage(
         base64: imgBuffer.toString('base64'),
       };
     }
-  } catch (err: any) {
-    console.warn('[OniPress Antigravity IDE Image warning]', err.message);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn('[OniPress Antigravity IDE Image warning]', errorMsg);
   }
 
   return {};
@@ -376,9 +377,10 @@ async function generateWithAgy(systemPrompt: string, userPrompt: string): Promis
       throw new Error(`agy CLI returned empty output. Stderr: ${stderr || 'none'}`);
     }
     return result;
-  } catch (err: any) {
-    console.error('[OniPress agy error]', err.message);
-    throw new Error(`Antigravity generation error: ${err.message}`);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('[OniPress agy error]', errorMsg);
+    throw new Error(`Antigravity generation error: ${errorMsg}`);
   } finally {
     try { unlinkSync(tmpPath); } catch {}
   }
@@ -464,9 +466,10 @@ Generate a comprehensive, high-ranking article:
     let rawOutput: string;
     try {
       rawOutput = await generateWithAgy(MASTER_SEO_SYSTEM_PROMPT, fullUserPrompt);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       return NextResponse.json({
-        error: `AI generation failed: ${err.message}. Make sure you are logged in to the Antigravity IDE.`,
+        error: `AI generation failed: ${errorMsg}. Make sure you are logged in to the Antigravity IDE.`,
       }, { status: 500 });
     }
 
@@ -510,7 +513,7 @@ Generate a comprehensive, high-ranking article:
     );
 
     // 6. Build WordPress Payload
-    const wpPayload: Record<string, any> = {
+    const wpPayload: Record<string, unknown> = {
       title: generatedPost.title,
       content: cleanedContent,
       status: postStatus === 'draft' ? 'draft' : 'publish',
@@ -575,7 +578,7 @@ Generate a comprehensive, high-ranking article:
       status: postStatus === 'draft' ? 'Draft' : 'Live',
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
       performance: `${seoScore}% SEO`,
-      type: contentType as any,
+      type: contentType as 'Blog Post' | 'Newsletter' | 'Social Post' | 'SEO Optimized Article',
       wordCount,
       focusKeyword: activeFocusKeyword,
       hasKeywordInTitle,
@@ -623,8 +626,9 @@ Generate a comprehensive, high-ranking article:
       seoDescription: generatedPost.seo_description,
       title: generatedPost.title,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('Generation Handler Error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: errorMsg || 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCampaigns, saveCampaign, saveCampaigns, deleteCampaign, getSites, Campaign } from '@/lib/db';
+import { getCampaigns, saveCampaign, deleteCampaign, getSites, Campaign } from '@/lib/db';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
@@ -12,8 +12,9 @@ export async function GET() {
   try {
     const campaigns = getCampaigns();
     return NextResponse.json(campaigns);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -50,8 +51,9 @@ export async function POST(req: Request) {
 
     saveCampaign(campaign);
     return NextResponse.json(campaign);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -63,8 +65,9 @@ export async function PUT(req: Request) {
     }
     saveCampaign(body);
     return NextResponse.json(body);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -77,8 +80,9 @@ export async function DELETE(req: Request) {
     }
     deleteCampaign(id);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -120,7 +124,7 @@ Return ONLY a valid JSON array with NO markdown fences, NO extra text:
     if (match) {
       const items = JSON.parse(match[0]);
       if (Array.isArray(items) && items.length > 0) {
-        return items.slice(0, count).map((item: any, idx: number) => ({
+        return items.slice(0, count).map((item: Record<string, unknown>, idx: number) => ({
           id: `topic-${Date.now()}-${idx + 1}`,
           title: String(item.title || `${niche} Guide ${idx + 1}`),
           focusKeyword: String(item.focusKeyword || niche),
@@ -129,8 +133,9 @@ Return ONLY a valid JSON array with NO markdown fences, NO extra text:
         }));
       }
     }
-  } catch (err: any) {
-    console.warn('[OniPress Topic AI Generator warning]', err.message);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn('[OniPress Topic AI Generator warning]', errorMsg);
   } finally {
     try { unlinkSync(tmpPath); } catch {}
   }

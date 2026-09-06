@@ -344,6 +344,7 @@ function onipress_create_post(WP_REST_Request $request): WP_REST_Response|WP_Err
                 require_once ABSPATH . 'wp-admin/includes/media.php';
                 $attachment = [
                     'post_mime_type' => $upload['type'] ?: 'image/jpeg',
+                  
                     'post_title'     => $clean_title,
                     'post_content'   => '',
                     'post_status'    => 'inherit'

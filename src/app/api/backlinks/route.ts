@@ -5,8 +5,9 @@ export async function GET() {
   try {
     const backlinks = getBacklinks();
     return NextResponse.json(backlinks);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -34,8 +35,9 @@ export async function POST(request: Request) {
 
     saveBacklink(backlink);
     return NextResponse.json({ success: true, backlink });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -49,7 +51,8 @@ export async function DELETE(request: Request) {
 
     deleteBacklink(id);
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

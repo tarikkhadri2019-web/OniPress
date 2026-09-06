@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Site, PostRecord } from '@/lib/db';
-import { Input } from './ui/input';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger } from './ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from './ui/select';
 import {
   FileText, Mail, Share2, Sparkles, Plus, Loader2,
   CheckCircle2, AlertCircle, ExternalLink, Trash2, Globe, KeyRound, Image as ImageIcon, Clock
@@ -59,7 +58,7 @@ const MODELS = [
   },
 ];
 
-const PROJECT_TYPES: { type: ProjectType; icon: any; desc: string }[] = [
+const PROJECT_TYPES: { type: ProjectType; icon: React.ElementType; desc: string }[] = [
   { type: 'Blog Post',            icon: FileText, desc: 'Long-form SEO article' },
   { type: 'Newsletter',           icon: Mail,     desc: 'Conversational email copy' },
   { type: 'Social Post',          icon: Share2,   desc: 'High-engagement viral post' },
@@ -69,17 +68,14 @@ const PROJECT_TYPES: { type: ProjectType; icon: any; desc: string }[] = [
 export default function AutoBlogger() {
   const [sites, setSites] = useState<Site[]>([]);
   const [posts, setPosts] = useState<PostRecord[]>([]);
-  const [configuredKeys, setConfiguredKeys] = useState<Record<string, boolean>>({});
-
   const [selectedSite, setSelectedSite]         = useState('');
   const [selectedModel, setSelectedModel]       = useState('openrouter:meta-llama/llama-3.1-70b-instruct:free');
-  const [customModelName, setCustomModelName]   = useState('');
   const [prompt, setPrompt]                     = useState('');
   const [focusKeyword, setFocusKeyword]         = useState('');
   const [postStatus, setPostStatus]             = useState<'publish' | 'draft'>('publish');
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
   const [imagePrompt, setImagePrompt]           = useState('');
-  const [autoGenerateImage, setAutoGenerateImage] = useState(true);
+  const [autoGenerateImage] = useState(true);
   const [selectedType, setSelectedType]         = useState<ProjectType>('Blog Post');
   const [showForm, setShowForm]                 = useState(true);
 
@@ -116,14 +112,6 @@ export default function AutoBlogger() {
         const hasAnthropic  = Boolean(s.anthropicApiKey);
         const hasGemini     = Boolean(s.geminiApiKey);
 
-        setConfiguredKeys({
-          openrouter: hasOpenRouter,
-          openai:     hasOpenAI,
-          anthropic:  hasAnthropic,
-          google:     hasGemini,
-          custom:     Boolean(s.customApiUrl),
-        });
-
         // Automatically choose the best ready model
         if (hasOpenRouter && !hasOpenAI) {
           setSelectedModel('openrouter:meta-llama/llama-3.1-70b-instruct:free');
@@ -141,6 +129,7 @@ export default function AutoBlogger() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGenerate = async () => {
@@ -188,7 +177,7 @@ export default function AutoBlogger() {
       clearTimeout(timeoutId);
       if (timerRef.current) clearInterval(timerRef.current);
 
-      let data: any = {};
+      let data: Record<string, unknown> = {};
       try {
         data = await res.json();
       } catch {
@@ -212,14 +201,15 @@ export default function AutoBlogger() {
         setStatus('error');
         setStatusMsg(data.error || `Server error (${res.status} ${res.statusText})`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId);
       if (timerRef.current) clearInterval(timerRef.current);
       setStatus('error');
       if (err.name === 'AbortError') {
         setStatusMsg('Generation took longer than 5 minutes. The Antigravity CLI process may need to be restarted.');
       } else {
-        setStatusMsg(`Error: ${err.message || 'Network connection failed'}`);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setStatusMsg(`Error: ${errorMsg || 'Network connection failed'}`);
       }
     }
   };
@@ -230,7 +220,6 @@ export default function AutoBlogger() {
   };
 
   const activeSite = sites.find(s => s.id === selectedSite);
-  const activeModelLabel = MODELS.flatMap(g => g.items).find(m => m.value === selectedModel)?.label || selectedModel;
 
   return (
     <div className="space-y-5">

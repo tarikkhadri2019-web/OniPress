@@ -9,23 +9,36 @@ export default function AnalyticsDashboard() {
   const [sites, setSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = () => {
+  const fetchData = async () => {
+    const [postsRes, sitesRes] = await Promise.all([
+      fetch('/api/posts'),
+      fetch('/api/sites')
+    ]);
+    const postsData = await postsRes.json();
+    const sitesData = await sitesRes.json();
+    return { postsData, sitesData };
+  };
+
+  useEffect(() => {
+    fetchData()
+      .then(({ postsData, sitesData }) => {
+        setPosts(Array.isArray(postsData) ? postsData : []);
+        setSites(Array.isArray(sitesData) ? sitesData : []);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleRefresh = () => {
     setIsLoading(true);
-    Promise.all([
-      fetch('/api/posts').then(r => r.json()),
-      fetch('/api/sites').then(r => r.json())
-    ])
-      .then(([postsData, sitesData]) => {
+    fetchData()
+      .then(({ postsData, sitesData }) => {
         setPosts(Array.isArray(postsData) ? postsData : []);
         setSites(Array.isArray(sitesData) ? sitesData : []);
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const totalWordsGenerated = posts.reduce((sum, p) => sum + (p.wordCount || 1450), 0);
   const livePosts = posts.filter(p => p.status === 'Live').length;
@@ -87,7 +100,7 @@ export default function AnalyticsDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={loadData}
+            onClick={handleRefresh}
             disabled={isLoading}
             className="px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] text-xs font-semibold text-white/80 flex items-center gap-1.5 transition-colors border border-white/10"
           >

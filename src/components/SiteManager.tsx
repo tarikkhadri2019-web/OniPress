@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Input } from './ui/input';
+// Remove unused Input
 import { Site } from '@/lib/db';
 import { Trash2, Globe, CheckCircle, AlertCircle, Loader2, Plus, Download } from 'lucide-react';
 
@@ -17,20 +17,25 @@ export default function SiteManager() {
   const [tags, setTags]   = useState('');
   const [adding, setAdding] = useState(false);
 
-  const fetchSites = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/sites');
-      const data = await res.json();
-      setSites(Array.isArray(data) ? data : []);
-    } catch {
-      setSites([]);
-    } finally {
-      setLoading(false);
-    }
+  const fetchSitesData = async () => {
+    const res = await fetch('/api/sites');
+    return res.json();
   };
 
-  useEffect(() => { fetchSites(); }, []);
+  const loadSites = () => {
+    setLoading(true);
+    fetchSitesData()
+      .then(data => setSites(Array.isArray(data) ? data : []))
+      .catch(() => setSites([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchSitesData()
+      .then(data => setSites(Array.isArray(data) ? data : []))
+      .catch(() => setSites([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const addSite = async () => {
     if (!name || !url || !token) return;
@@ -42,12 +47,12 @@ export default function SiteManager() {
     });
     setName(''); setUrl(''); setToken(''); setTags('');
     setAdding(false);
-    fetchSites();
+    loadSites();
   };
 
   const deleteSite = async (id: string) => {
     await fetch(`/api/sites?id=${id}`, { method: 'DELETE' });
-    fetchSites();
+    loadSites();
   };
 
   const verifySite = async (id: string) => {

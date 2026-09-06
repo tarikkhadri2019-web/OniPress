@@ -29,8 +29,9 @@ export async function GET() {
           config.siteUrl,
           28
         );
-      } catch (err: any) {
-        performanceError = err?.message || 'Could not fetch live search metrics';
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        performanceError = errorMsg || 'Could not fetch live search metrics';
       }
     }
 
@@ -41,9 +42,10 @@ export async function GET() {
       livePerformance,
       performanceError,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch GSC settings' },
+      { success: false, error: errorMsg || 'Failed to fetch GSC settings' },
       { status: 500 }
     );
   }
@@ -66,7 +68,7 @@ export async function POST(req: Request) {
       if (body.rawJson) {
         try {
           const parsed = JSON.parse(body.rawJson);
-          if (parsed.client_email) (body as any).clientEmail = parsed.client_email;
+          if (parsed.client_email) (body as Record<string, unknown>).clientEmail = parsed.client_email;
           if (parsed.private_key) privateKey = parsed.private_key;
         } catch {
           // ignore parsing error, proceed with direct fields
@@ -81,15 +83,16 @@ export async function POST(req: Request) {
           // Verify JWT signing and token generation
           await getGoogleAccessToken(clientEmail, privateKey);
           status = 'connected';
-        } catch (err: any) {
+        } catch (err: unknown) {
           status = 'error';
-          lastError = err.message || 'Authentication failed. Check your private key and client email.';
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          lastError = errorMsg || 'Authentication failed. Check your private key and client email.';
         }
       }
 
       const updated: GscConfig = {
         siteUrl,
-        clientEmail: (body as any).clientEmail || clientEmail,
+        clientEmail: (body as Record<string, unknown>).clientEmail as string || clientEmail,
         privateKey: privateKey || current.privateKey,
         autoIndexOnPublish,
         status,
@@ -166,9 +169,10 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: errorMsg || 'Internal Server Error' },
       { status: 500 }
     );
   }
