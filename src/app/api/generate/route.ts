@@ -525,33 +525,40 @@ Generate a comprehensive, high-ranking article:
 
     // 7. Push to WordPress via OniPress Connect Plugin
     const wpBaseUrl = site.url.replace(/\/$/, '');
-    let oniPressApiUrl = `${wpBaseUrl}/wp-json/onipress/v1/posts`;
+    let wpRes: Response | null = null;
+    let lastErrorMsg = '';
 
-    let wpRes = await fetch(oniPressApiUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${site.applicationPassword}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(wpPayload),
-      signal: AbortSignal.timeout(60_000),
-    });
+    // First attempt: try rest_route or /wp-json/
+    const endpointsToTry = [
+      `${wpBaseUrl}/index.php?rest_route=/onipress/v1/posts`,
+      `${wpBaseUrl}/wp-json/onipress/v1/posts`,
+    ];
 
-    // Fallback for LiteSpeed/plain permalinks if /wp-json/ is 404
-    if (wpRes.status === 404) {
-      const fallbackApiUrl = `${wpBaseUrl}/index.php?rest_route=/onipress/v1/posts`;
-      const fallbackRes = await fetch(fallbackApiUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${site.applicationPassword}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(wpPayload),
-        signal: AbortSignal.timeout(60_000),
-      });
-      if (fallbackRes.ok || fallbackRes.status !== 404) {
-        wpRes = fallbackRes;
+    for (const endpoint of endpointsToTry) {
+      try {
+        const attemptRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${site.applicationPassword}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(wpPayload),
+          signal: AbortSignal.timeout(60_000),
+        });
+
+        if (attemptRes.ok || attemptRes.status !== 404) {
+          wpRes = attemptRes;
+          break;
+        }
+      } catch (e) {
+        lastErrorMsg = e instanceof Error ? e.message : String(e);
       }
+    }
+
+    if (!wpRes) {
+      return NextResponse.json({
+        error: `Could not reach WordPress at ${wpBaseUrl} (${lastErrorMsg || 'Connection failed'}). Please check that your WordPress site is online.`,
+      }, { status: 502 });
     }
 
     if (!wpRes.ok) {

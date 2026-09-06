@@ -13,23 +13,34 @@ export async function POST(request: Request) {
     if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
 
     const wpBaseUrl = site.url.replace(/\/$/, '');
-    let pingUrl = `${wpBaseUrl}/wp-json/onipress/v1/ping`;
+    let res: Response | null = null;
+    let lastError = '';
 
-    let res = await fetch(pingUrl, {
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${site.applicationPassword}` }
-    });
+    const endpointsToTry = [
+      `${wpBaseUrl}/index.php?rest_route=/onipress/v1/ping`,
+      `${wpBaseUrl}/wp-json/onipress/v1/ping`,
+    ];
 
-    // If /wp-json/ is not rewritten (e.g. LiteSpeed/plain permalinks), fallback to rest_route query param
-    if (res.status === 404) {
-      const fallbackUrl = `${wpBaseUrl}/index.php?rest_route=/onipress/v1/ping`;
-      const fallbackRes = await fetch(fallbackUrl, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${site.applicationPassword}` }
-      });
-      if (fallbackRes.ok) {
-        res = fallbackRes;
+    for (const endpoint of endpointsToTry) {
+      try {
+        const attemptRes = await fetch(endpoint, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${site.applicationPassword}` }
+        });
+        if (attemptRes.ok || attemptRes.status !== 404) {
+          res = attemptRes;
+          break;
+        }
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : String(e);
       }
+    }
+
+    if (!res) {
+      return NextResponse.json({
+        connected: false,
+        error: `Could not connect to ${wpBaseUrl} (${lastError || 'Connection failed'}). Check site URL.`
+      }, { status: 200 });
     }
 
     if (!res.ok) {
