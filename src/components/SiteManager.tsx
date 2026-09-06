@@ -106,7 +106,7 @@ export default function SiteManager() {
               <span className="text-sm font-bold text-white">Connect a WordPress Site</span>
             </div>
             <a
-              href="/onipress-connect.zip"
+              href="/api/plugin/download"
               download="onipress-connect.zip"
               className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-lg bg-[#ff7a18]/15 text-[#ff9940] hover:bg-[#ff7a18]/25 border border-[#ff7a18]/30 transition-all"
               title="Download plugin ready to upload to WordPress"

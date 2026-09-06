@@ -1,4 +1,4 @@
-﻿# OniPress — Dependencies, Build Artifacts
+# OniPress — Dependencies, Build Artifacts
 node_modules/
 .next/
 .vercel/
@@ -6,6 +6,7 @@ node_modules/
 # Local data (contains site credentials — NEVER commit)
 data/
 *.zip
+!public/onipress-connect.zip
 
 # Environment files
 .env
