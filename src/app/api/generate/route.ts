@@ -4,7 +4,8 @@ import { promisify } from 'util';
 import { writeFileSync, unlinkSync, existsSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { getSites, savePost, getBacklinks, Backlink } from '@/lib/db';
+import { getSites, savePost, getBacklinks, Backlink, getGscConfig, saveGscLog } from '@/lib/db';
+import { submitToGoogleIndexing } from '@/lib/gsc';
 
 const execFileAsync = promisify(execFile);
 
@@ -585,6 +586,34 @@ Generate a comprehensive, high-ranking article:
       hasCitations,
       seoScore,
     });
+
+    // Automatically trigger Google Search Console Indexing if configured
+    if (postStatus !== 'draft' && wpData.post_url) {
+      try {
+        const gscConfig = getGscConfig();
+        if (
+          gscConfig.status === 'connected' &&
+          gscConfig.autoIndexOnPublish &&
+          gscConfig.clientEmail &&
+          gscConfig.privateKey
+        ) {
+          submitToGoogleIndexing(gscConfig.clientEmail, gscConfig.privateKey, wpData.post_url)
+            .then((indexRes) => {
+              saveGscLog({
+                id: `gsc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                url: wpData.post_url,
+                type: 'URL_UPDATED',
+                status: indexRes.success ? 'SUCCESS' : 'FAILED',
+                submittedAt: new Date().toISOString(),
+                responseMessage: indexRes.message,
+              });
+            })
+            .catch(() => {});
+        }
+      } catch {
+        // non-blocking
+      }
+    }
 
     return NextResponse.json({
       success: true,

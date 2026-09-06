@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSites, getSettings, getPosts, savePost, Site, PostRecord } from '@/lib/db';
+import { getSites, getSettings, getPosts, savePost, Site, PostRecord, getGscConfig, saveGscLog, getBacklinks } from '@/lib/db';
+import { submitToGoogleIndexing, querySearchAnalytics } from '@/lib/gsc';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -8,8 +9,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 const MCP_SERVER_INFO = {
   name: 'onipress-mcp-server',
-  version: '1.1.0',
-  description: 'Universal Model Context Protocol (MCP) bridge for WordPress multi-site management and SEO auto-blogging.',
+  version: '1.2.0',
+  description: 'Universal Model Context Protocol (MCP) bridge for WordPress multi-site management, RankMath SEO auto-blogging, and Google Search Console Fast Indexing.',
 };
 
 const MCP_TOOLS = [
@@ -85,6 +86,36 @@ const MCP_TOOLS = [
         title: { type: 'string', description: 'Optional media title' },
       },
       required: ['site_id', 'image_url'],
+    },
+  },
+  {
+    name: 'onipress_gsc_index_url',
+    description: 'Submit any published URL to Google Web Search Indexing API v3 for immediate Googlebot crawl.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'The live canonical URL to index' },
+        type: { type: 'string', enum: ['URL_UPDATED', 'URL_DELETED'], default: 'URL_UPDATED' },
+      },
+      required: ['url'],
+    },
+  },
+  {
+    name: 'onipress_gsc_get_metrics',
+    description: 'Query live Google Search Console analytics: clicks, impressions, CTR, and average position for the site.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        days: { type: 'number', description: 'Number of past days to query (default 28)', default: 28 },
+      },
+    },
+  },
+  {
+    name: 'onipress_list_backlinks',
+    description: 'Retrieve all configured internal and external backlinks used for automated SEO injection.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
     },
   },
 ];
@@ -276,8 +307,6 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
           cleanedContent = h2Idx !== -1 ? cleanedContent.substring(0, h2Idx + 5) + defaultTable + cleanedContent.substring(h2Idx + 5) : defaultTable + cleanedContent;
         }
 
-        const autoImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalFocusKeyword)}%20professional%20studio%20lighting%204k%20ultra%20realistic%20award%20winning%20editorial%20photography?width=1280&height=720&nologo=true&enhance=true`;
-
         // Publish to WordPress via OniPress Connect Plugin
         const wpRes = await fetch(`${site.url.replace(/\/$/, '')}/wp-json/onipress/v1/posts`, {
           method: 'POST',
@@ -291,7 +320,6 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
             status: args.status || 'publish',
             focus_keyword: generatedPost.focus_keyword || finalFocusKeyword,
             seo_description: generatedPost.seo_description,
-            featured_image_url: autoImageUrl,
           }),
         });
 
@@ -389,6 +417,78 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
           id,
           result: {
             content: [{ type: 'text', text: JSON.stringify(wpData, null, 2) }],
+          },
+        });
+      }
+
+      // Tool 7: Fast Index URL with Google Search Console Indexing API
+      if (name === 'onipress_gsc_index_url') {
+        const config = getGscConfig();
+        if (!config.clientEmail || !config.privateKey) {
+          throw new Error('Google Search Console credentials are not configured in OniPress.');
+        }
+
+        const res = await submitToGoogleIndexing(
+          config.clientEmail,
+          config.privateKey,
+          args?.url,
+          args?.type || 'URL_UPDATED'
+        );
+
+        saveGscLog({
+          id: `gsc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          url: args?.url,
+          type: args?.type || 'URL_UPDATED',
+          status: res.success ? 'SUCCESS' : 'FAILED',
+          submittedAt: new Date().toISOString(),
+          responseMessage: res.message,
+        });
+
+        return NextResponse.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            content: [{
+              type: 'text',
+              text: res.success
+                ? `✅ Indexing request accepted by Google! ${res.message}`
+                : `❌ Google indexing failed: ${res.message}`,
+            }],
+          },
+        });
+      }
+
+      // Tool 8: Get live Google Search Console metrics
+      if (name === 'onipress_gsc_get_metrics') {
+        const config = getGscConfig();
+        if (!config.clientEmail || !config.privateKey || !config.siteUrl) {
+          throw new Error('Google Search Console credentials or siteUrl not configured.');
+        }
+
+        const metrics = await querySearchAnalytics(
+          config.clientEmail,
+          config.privateKey,
+          config.siteUrl,
+          args?.days || 28
+        );
+
+        return NextResponse.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            content: [{ type: 'text', text: JSON.stringify(metrics, null, 2) }],
+          },
+        });
+      }
+
+      // Tool 9: List backlinks
+      if (name === 'onipress_list_backlinks') {
+        const links = getBacklinks();
+        return NextResponse.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            content: [{ type: 'text', text: JSON.stringify(links, null, 2) }],
           },
         });
       }

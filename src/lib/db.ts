@@ -213,3 +213,73 @@ export function deleteBacklink(id: string) {
   const list = getBacklinks().filter(b => b.id !== id);
   saveBacklinks(list);
 }
+
+// ─────────────────────────────────────────────
+// GOOGLE SEARCH CONSOLE & INDEXING API ENGINE
+// ─────────────────────────────────────────────
+export interface GscConfig {
+  siteUrl: string;              // e.g. https://myblog.com or sc-domain:myblog.com
+  clientEmail: string;          // service account email
+  privateKey: string;           // PEM RSA private key
+  autoIndexOnPublish: boolean;
+  status: 'unconfigured' | 'connected' | 'error';
+  lastChecked?: string;
+  lastError?: string;
+}
+
+export interface GscIndexLog {
+  id: string;
+  url: string;
+  type: 'URL_UPDATED' | 'URL_DELETED';
+  status: 'SUCCESS' | 'FAILED' | 'PENDING';
+  submittedAt: string;
+  responseMessage?: string;
+}
+
+export function getGscConfig(): GscConfig {
+  const file = path.join(dataDir, 'gsc_config.json');
+  if (!fs.existsSync(file)) {
+    return {
+      siteUrl: '',
+      clientEmail: '',
+      privateKey: '',
+      autoIndexOnPublish: true,
+      status: 'unconfigured',
+    };
+  }
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch {
+    return {
+      siteUrl: '',
+      clientEmail: '',
+      privateKey: '',
+      autoIndexOnPublish: true,
+      status: 'unconfigured',
+    };
+  }
+}
+
+export function saveGscConfig(config: GscConfig) {
+  const file = path.join(dataDir, 'gsc_config.json');
+  fs.writeFileSync(file, JSON.stringify(config, null, 2));
+}
+
+export function getGscLogs(): GscIndexLog[] {
+  const file = path.join(dataDir, 'gsc_logs.json');
+  if (!fs.existsSync(file)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
+export function saveGscLog(log: GscIndexLog) {
+  const logs = getGscLogs();
+  logs.unshift(log);
+  if (logs.length > 100) logs.pop(); // Keep last 100 entries
+  const file = path.join(dataDir, 'gsc_logs.json');
+  fs.writeFileSync(file, JSON.stringify(logs, null, 2));
+}
+

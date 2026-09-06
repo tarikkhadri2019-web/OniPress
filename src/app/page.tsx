@@ -8,10 +8,11 @@ import ContentManager from '@/components/ContentManager';
 import CampaignsManager from '@/components/CampaignsManager';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import LinkManager from '@/components/LinkManager';
+import GscManager from '@/components/GscManager';
 import SupportCenter from '@/components/SupportCenter';
 import { 
   Bell, User, Sparkles, FileText, Target, BarChart3, 
-  Globe, Sliders, LifeBuoy, Link2
+  Globe, Sliders, LifeBuoy, Link2, SearchCheck
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -23,6 +24,7 @@ export default function Home() {
     { id: 'content', label: 'Content', icon: FileText },
     { id: 'links', label: 'Backlinks', icon: Link2 },
     { id: 'campaigns', label: 'Campaigns', icon: Target },
+    { id: 'gsc', label: 'Google Indexing', icon: SearchCheck },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'sites', label: 'Site Manager', icon: Globe },
     { id: 'settings', label: 'Settings', icon: Sliders },
@@ -154,6 +156,7 @@ export default function Home() {
                 {activeTab === 'content' && <ContentManager />}
                 {activeTab === 'links' && <LinkManager />}
                 {activeTab === 'campaigns' && <CampaignsManager />}
+                {activeTab === 'gsc' && <GscManager />}
                 {activeTab === 'analytics' && <AnalyticsDashboard />}
                 {activeTab === 'sites' && <SiteManager />}
                 {activeTab === 'settings' && <ApiSettings />}

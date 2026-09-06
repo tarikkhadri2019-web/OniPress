@@ -37,27 +37,40 @@ All endpoints are scoped under `/wp-json/onipress/v1` and require the header:
 
 ```json
 {
-  "title": "Top 5 Air Fresheners for Cars in Morocco",
-  "content": "<h2>Why Air Freshener Matters</h2><p>Article body here...</p>",
+  "title": "The Complete Guide to Next-Gen Quantum Computing in 2026",
+  "content": "<h2>Why Architecture Matters</h2><p>Comprehensive article body here...</p>",
   "status": "publish",
-  "focus_keyword": "car air freshener Morocco",
-  "seo_description": "Discover the longest-lasting car air fresheners in Morocco with fruity and fresh scents.",
-  "featured_image_url": "https://example.com/fruit_orange.jpg",
-  "category_names": ["Automotive", "Lifestyle"],
-  "tag_names": ["Onifresh", "Air Freshener", "Morocco"]
+  "focus_keyword": "quantum computing 2026",
+  "seo_description": "Master the fundamentals and future of quantum computing with our detailed 2026 technical guide.",
+  "featured_image_base64": "data:image/jpeg;base64,...",
+  "category_names": ["Technology", "Engineering"],
+  "tag_names": ["AI", "Quantum", "Future Tech"]
 }
 ```
 
 ### Auto-SEO Features:
 - **RankMath**: Automatically sets `rank_math_focus_keyword`, `rank_math_description`, and `rank_math_title`.
 - **Yoast SEO**: Automatically sets `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`.
-- **Featured Image**: Automatically downloads `featured_image_url`, uploads it to Media Library, and assigns it as the featured thumbnail (`_thumbnail_id`) in a single call!
+- **Featured Image**: Automatically embeds `featured_image_base64` or downloads `featured_image_url`, uploads to Media Library, and assigns it as the featured thumbnail (`_thumbnail_id`) in a single call!
+
+---
+
+## 🔍 Google Search Console & Instant Indexing
+
+When integrated with OniPress:
+1. Whenever a post is published via `/posts`, OniPress automatically dispatches an immediate crawl ping to **Google Web Search Indexing API v3**.
+2. Googlebot visits and indexes the new post within minutes instead of waiting days or weeks.
+3. Live Search Console telemetry (Clicks, Impressions, CTR, Keywords position) is automatically synced.
 
 ---
 
 ## 🤖 MCP (Model Context Protocol) Support
 
-OniPress Connect includes an MCP-compatible manifest at `/wp-json/onipress/v1/mcp`. You can connect Claude Desktop or custom agents to call `onipress_create_post`, `onipress_upload_media`, and `onipress_site_info`.
+OniPress Connect includes an MCP-compatible manifest at `/wp-json/onipress/v1/mcp` and the OniPress Next.js bridge at `/api/mcp`. You can connect Claude Desktop, Cursor, or Antigravity IDE to call:
+- `onipress_generate_and_publish` — Full autonomous generation & publish
+- `onipress_gsc_index_url` — Submit URL directly to Googlebot for instant indexing
+- `onipress_gsc_get_metrics` — Fetch real Google Search Console metrics
+- `onipress_list_backlinks` — Inspect internal & external linking database
 
 ---
 
