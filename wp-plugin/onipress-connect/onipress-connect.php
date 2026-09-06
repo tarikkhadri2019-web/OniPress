@@ -35,7 +35,7 @@ add_filter('rank_math/researches/toc_plugins', function ($toc_plugins) {
     if (!is_array($toc_plugins)) {
         $toc_plugins = [];
     }
-    $toc_plugins['onipress-connect/onipress-connect.php'] = 'OniPress Connect';
+    $toc_plugins[plugin_basename(__FILE__)] = 'OniPress Connect';
     return $toc_plugins;
 });
 

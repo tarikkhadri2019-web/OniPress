@@ -100,12 +100,16 @@ function buildPosixZip(files: { name: string; content: Buffer }[]): Buffer {
   return Buffer.concat([...localHeaders, ...centralHeaders, eocd]);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    // Allow custom folder to bypass "destination folder already exists" collisions
+    const folder = searchParams.get('folder') || 'onipress-ai';
+    const filename = `${folder}.zip`;
+
     const cwd = process.cwd();
     const pluginPhpPath = join(cwd, 'wp-plugin', 'onipress-connect', 'onipress-connect.php');
     const pluginReadmePath = join(cwd, 'wp-plugin', 'onipress-connect', 'README.md');
-    const publicZipPath = join(cwd, 'public', 'onipress-connect.zip');
 
     if (!existsSync(pluginPhpPath)) {
       return NextResponse.json({ error: 'Plugin source file not found.' }, { status: 404 });
@@ -116,22 +120,23 @@ export async function GET() {
 
     // Generate POSIX-compliant zip archive with forward slashes
     const zipBuffer = buildPosixZip([
-      { name: 'onipress-connect/onipress-connect.php', content: phpBuffer },
-      { name: 'onipress-connect/README.md', content: readmeBuffer },
+      { name: `${folder}/onipress-connect.php`, content: phpBuffer },
+      { name: `${folder}/README.md`, content: readmeBuffer },
     ]);
 
-    // Keep public zip updated
+    // Cache to public directory if matching standard names
     try {
+      const publicZipPath = join(cwd, 'public', filename);
       writeFileSync(publicZipPath, zipBuffer);
     } catch {
-      // Non-blocking in read-only environments
+      // Non-blocking
     }
 
     return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': 'attachment; filename="onipress-connect.zip"',
+        'Content-Disposition': `attachment; filename="${filename}"`,
         'Content-Length': String(zipBuffer.length),
         'Cache-Control': 'no-cache',
       },
