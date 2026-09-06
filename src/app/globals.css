@@ -1,0 +1,240 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-cursive: var(--font-cursive);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+}
+
+:root, .dark {
+  --background: #0c0a08;
+  --foreground: #faf5ef;
+  --card: #18140f;
+  --card-foreground: #faf5ef;
+  --popover: #18140f;
+  --popover-foreground: #faf5ef;
+  --primary: #ff7a18;
+  --primary-foreground: #0c0a08;
+  --secondary: #1e190f;
+  --secondary-foreground: #faf5ef;
+  --muted: #1e190f;
+  --muted-foreground: #a09070;
+  --accent: rgba(255, 122, 24, 0.15);
+  --accent-foreground: #ffaa55;
+  --destructive: #e03030;
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: rgba(255, 122, 24, 0.5);
+  --radius: 12px;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html, body { 
+    @apply bg-background text-foreground;
+    height: 100%;
+    overflow: hidden; /* SINGLE SCROLL — controlled inside */
+  }
+  html { @apply font-sans; }
+}
+
+/* ══════════════════════════════════════════
+   ONIFRESH — Brand Utilities
+══════════════════════════════════════════ */
+
+/* ── Cursive fruity headline (like "fruity" on the bottle) ── */
+.oni-cursive {
+  font-family: var(--font-cursive), 'Georgia', 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ── Bold display italic for hero ── */
+.oni-display {
+  font-family: var(--font-display), 'Georgia', serif;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+/* ── Orange brand text ── */
+.oni-orange { color: #ff7a18; }
+
+/* ── Onifresh outer frame — the single orange-glowing dashboard border ── */
+.oni-frame {
+  border: 1.5px solid rgba(255, 122, 24, 0.5);
+  box-shadow:
+    0 0 60px rgba(255, 100, 0, 0.2),
+    0 0 120px rgba(255, 100, 0, 0.08),
+    inset 0 0 40px rgba(255, 100, 0, 0.04);
+  background: #13100d;
+}
+
+/* ── Inner dark card ── */
+.oni-card {
+  background: rgba(20, 16, 10, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Semi-dark inner panel ── */
+.oni-panel {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Orange glow bg lighting (matching bottle warmth) ── */
+.oni-bg-light {
+  background:
+    radial-gradient(ellipse 55% 45% at 90% 15%, rgba(255, 110, 0, 0.28), transparent),
+    radial-gradient(ellipse 40% 40% at 8% 80%, rgba(200, 60, 0, 0.2), transparent),
+    radial-gradient(ellipse 30% 30% at 15% 20%, rgba(255, 50, 50, 0.08), transparent);
+}
+
+/* ── Fruit assets — screen blend over dark BG ── */
+.fruit-img {
+  mix-blend-mode: screen;
+  pointer-events: none;
+  position: absolute;
+  user-select: none;
+  z-index: 5;
+}
+
+/* ── Corner fruits with glow ── */
+/* ── Fruit positions ── */
+.fruit-tr  { top: -70px; right: -80px; width: 360px; height: 360px; opacity: 0.95; transform: rotate(12deg); }
+.fruit-bl  { bottom: -60px; left: -60px; width: 300px; height: 300px; opacity: 0.88; transform: rotate(-10deg); }
+/* Flowers moved to hero-center — floating lightly between orange slices & berries */
+.fruit-flowers-hero {
+  position: absolute;
+  top: 48px;
+  left: 12%;
+  width: 220px;
+  height: 220px;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  opacity: 0.65;
+  transform: rotate(-8deg) scale(0.9);
+  z-index: 5;
+}
+.fruit-br  { bottom: 60px; right: -30px; width: 180px; height: 180px; opacity: 0.55; transform: rotate(-18deg); }
+.fruit-ml  { top: 42%; left: -50px; width: 170px; height: 170px; opacity: 0.45; transform: rotate(8deg); }
+.fruit-mr  { top: 38%; right: -45px; width: 190px; height: 190px; opacity: 0.5; transform: rotate(-8deg); }
+.fruit-tm  { top: -25px; left: 34%; width: 180px; height: 180px; opacity: 0.5; transform: rotate(5deg); }
+
+/* ── Custom scrollbar — brand orange on dark ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: rgba(255,122,24,0.4); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,122,24,0.7); }
+
+/* ── Fix Select dropdown internal scroll and width ── */
+[data-radix-select-viewport], [role='listbox'] {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,122,24,0.4) rgba(0,0,0,0.3);
+  overscroll-behavior: contain;
+}
+
+/* Force all select popups to wide dark layout — no narrow clipping, no white backgrounds */
+[data-slot="select-content"] {
+  min-width: max(var(--anchor-width, 100%), 350px) !important;
+  width: max-content !important;
+  max-width: min(520px, 95vw) !important;
+  background: #18130d !important;
+  border: 1.5px solid rgba(255, 122, 24, 0.3) !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.85), 0 0 25px rgba(255,122,24,0.15) !important;
+  border-radius: 12px !important;
+  padding: 6px !important;
+}
+
+/* Ensure item text never gets clipped */
+[data-slot="select-item"] {
+  white-space: normal !important;
+  word-break: break-word !important;
+  padding: 8px 12px !important;
+  font-size: 12.5px !important;
+  line-height: 1.4 !important;
+  border-radius: 8px !important;
+  color: #faf5ef !important;
+}
+
+[data-slot="select-item"]:hover,
+[data-slot="select-item"]:focus,
+[data-slot="select-item"][data-highlighted] {
+  background: rgba(255, 122, 24, 0.18) !important;
+  color: #ff9940 !important;
+}
+
+/* Styled scroll arrows in dark theme */
+[data-slot="select-scroll-up-button"],
+[data-slot="select-scroll-down-button"] {
+  background: #18130d !important;
+  color: #ff7a18 !important;
+  border: none !important;
+}
+
+
+/* ── Active tab pill — orange ── */
+[data-slot="tabs-trigger"][data-active] {
+  background: linear-gradient(135deg, #ff8c00, #e05500) !important;
+  color: #0c0a08 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 24px rgba(255, 122, 24, 0.6) !important;
+  border-radius: 9999px !important;
+}
+[data-slot="tabs-trigger"][data-active] * { color: #0c0a08 !important; }
+
+/* ── Orange pill button ── */
+.oni-btn {
+  background: linear-gradient(135deg, #ff8c00, #e05500);
+  color: #0c0a08;
+  font-weight: 800;
+  border: none;
+  box-shadow: 0 4px 20px rgba(255, 120, 0, 0.5);
+  transition: all 0.2s ease;
+}
+.oni-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 28px rgba(255, 120, 0, 0.65);
+}
+
+/* ── Input fields styled to match brand ── */
+.oni-input {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #faf5ef !important;
+  border-radius: 10px !important;
+  transition: border-color 0.2s !important;
+}
+.oni-input:focus, .oni-input:focus-within {
+  border-color: rgba(255, 122, 24, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(255, 122, 24, 0.12) !important;
+}
+.oni-input::placeholder { color: rgba(160, 130, 100, 0.7) !important; }

@@ -1,0 +1,26 @@
+﻿# OniPress — Dependencies, Build Artifacts
+node_modules/
+.next/
+.vercel/
+
+# Local data (contains site credentials — NEVER commit)
+data/
+*.zip
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temp files
+test_module.js
+*.tmp
+*.txt.tmp
+
+# Build info
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# OS files
+.DS_Store
+Thumbs.db
