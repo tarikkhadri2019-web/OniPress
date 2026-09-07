@@ -376,6 +376,18 @@ function onipress_create_post($request) {
         }
     }
 
+    if ($featured_media_id) {
+        $media_url = wp_get_attachment_url($featured_media_id);
+        if ($media_url) {
+            $post = get_post($post_id);
+            $target_url = !empty($request['featured_image_url']) ? $request['featured_image_url'] : '__ONIPRESS_FEATURED_IMAGE__';
+            $updated_content = str_replace($target_url, $media_url, $post->post_content);
+            if ($updated_content !== $post->post_content) {
+                wp_update_post(['ID' => $post_id, 'post_content' => $updated_content]);
+            }
+        }
+    }
+
     return new WP_REST_Response([
         'success'            => true,
         'post_id'            => $post_id,

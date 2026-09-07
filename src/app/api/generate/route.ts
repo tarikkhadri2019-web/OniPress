@@ -256,9 +256,10 @@ function sanitizeAndEnforceSeo(
   const escKw = focusKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const hasAltImage = new RegExp(`<img[^>]+alt=["'][^"']*${escKw}[^"']*["']`, 'i').test(html);
   if (!hasAltImage && customImageUrl) {
+    const inlineImgSrc = customImageUrl.startsWith('/') ? '__ONIPRESS_FEATURED_IMAGE__' : customImageUrl;
     const contentImage = `
 <figure style="margin:28px 0; text-align:center;">
-  <img src="${customImageUrl}" alt="${focusKeyword}" style="width:100%; max-height:480px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;" loading="lazy" />
+  <img src="${inlineImgSrc}" alt="${focusKeyword}" style="width:100%; max-height:480px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;" loading="lazy" />
   <figcaption style="font-size:12px; color:#6b7280; margin-top:8px;">Strategic overview for ${focusKeyword}</figcaption>
 </figure>`;
     const firstH2Close = html.indexOf('</h2>');
