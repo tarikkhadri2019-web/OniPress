@@ -2,9 +2,9 @@
 
 ![OniPress Banner](docs/images/onipress_banner.jpg)
 
-# OniPress — Autonomous AI Publishing Engine
+# OniPress — Autonomous Gemini AI Publishing Dashboard
 
-> **A self-hosted, autonomous WordPress publishing pipeline. Generates comprehensive 1,500+ word articles, provisions high-resolution featured images, enforces SEO backlink strategies, and triggers immediate indexing via Google Search Console — all from a single dashboard.**
+> **A self-hosted, autonomous WordPress publishing pipeline powered by Google Gemini AI. Generates comprehensive 1,500+ word articles, provisions high-resolution featured images, enforces SEO backlink strategies, and triggers immediate indexing via Google Search Console — all from a single dashboard.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)](https://nextjs.org)
@@ -23,12 +23,15 @@ By running the free **[Antigravity IDE](https://antigravity.ai)** locally and au
 
 ## 🚀 Core Capabilities
 
-- **Autonomous Copywriting**: Generates 1,200–1,800+ word guides structured with semantic HTML, tables, key takeaways, and FAQs.
-- **Native Visual Engine**: Provisions photorealistic 16:9 featured images via Google Imagen, sideloading them directly into the WordPress Media Library with optimized alt text.
-- **Instant Google Indexing**: Bypasses the standard crawl wait times. OniPress leverages the official **Google Web Search Indexing API v3** to ping Googlebot the moment an article is published.
-- **Unified Telemetry**: A single dashboard displaying live Google Search Console rankings (Clicks, Impressions, CTR) alongside live Google Analytics 4 (GA4) traffic data.
-- **Strategic Backlinking**: Define target internal and external domain authority anchors. The engine semantically weaves them into generated content to satisfy RankMath link requirements.
-- **Multi-Site Architecture**: Manage an unlimited number of WordPress sites from a centralized interface via secure Bearer token authentication.
+| Feature | Description |
+| :--- | :--- |
+| **Autonomous Copywriting** | Generates 1,200–1,800+ word SEO guides structured with semantic HTML, tables, key takeaways, and FAQs. |
+| **Native Visual Engine** | Provisions photorealistic 16:9 featured images via Google Imagen, sideloading them directly into the WP Media Library. |
+| **Instant Google Indexing** | Bypasses crawl wait times using the official **Google Web Search Indexing API v3** to ping Googlebot immediately. |
+| **Unified Telemetry** | A single dashboard displaying live Google Search Console rankings alongside live Google Analytics 4 (GA4) traffic data. |
+| **Strategic Backlinking** | Weaves target internal/external domain authority anchors semantically into generated content to satisfy RankMath. |
+| **Multi-Site Architecture** | Manage an unlimited number of WordPress sites from a centralized interface via secure Bearer token authentication. |
+
 
 ---
 
