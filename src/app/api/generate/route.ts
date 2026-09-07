@@ -114,8 +114,7 @@ function sanitizeAndEnforceSeo(
   siteName: string,
   siteUrl: string,
   customImageUrl?: string,
-  backlinks: Backlink[] = [],
-  youtubeUrl?: string
+  backlinks: Backlink[] = []
 ): string {
   let html = rawHtml;
 
@@ -256,10 +255,9 @@ function sanitizeAndEnforceSeo(
   const escKw = focusKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const hasAltImage = new RegExp(`<img[^>]+alt=["'][^"']*${escKw}[^"']*["']`, 'i').test(html);
   if (!hasAltImage && customImageUrl) {
-    const inlineImgSrc = customImageUrl.startsWith('/') ? '__ONIPRESS_FEATURED_IMAGE__' : customImageUrl;
     const contentImage = `
 <figure style="margin:28px 0; text-align:center;">
-  <img src="${inlineImgSrc}" alt="${focusKeyword}" style="width:100%; max-height:480px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;" loading="lazy" />
+  <img src="${customImageUrl}" alt="${focusKeyword}" style="width:100%; max-height:480px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;" loading="lazy" />
   <figcaption style="font-size:12px; color:#6b7280; margin-top:8px;">Strategic overview for ${focusKeyword}</figcaption>
 </figure>`;
     const firstH2Close = html.indexOf('</h2>');
@@ -363,32 +361,6 @@ function sanitizeAndEnforceSeo(
     }
   }
 
-  // 12. Embed YouTube Video if provided
-  if (youtubeUrl) {
-    let videoId = '';
-    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-    const match = youtubeUrl.match(ytRegex);
-    if (match && match[1]) {
-      videoId = match[1];
-    }
-    
-    if (videoId) {
-      const embedHtml = `
-<div style="margin: 32px 0; text-align: center;">
-  <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 12px; border: 1px solid #e5e7eb;">
-    <iframe src="https://www.youtube.com/embed/${videoId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;" allowfullscreen title="YouTube Video"></iframe>
-  </div>
-</div>`;
-      
-      const firstH2Close = html.indexOf('</h2>');
-      if (firstH2Close !== -1) {
-        html = html.substring(0, firstH2Close + 5) + embedHtml + html.substring(firstH2Close + 5);
-      } else {
-        html = embedHtml + html;
-      }
-    }
-  }
-
   return html;
 }
 
@@ -424,19 +396,19 @@ async function generateWithAgy(systemPrompt: string, userPrompt: string): Promis
     console.error('[OniPress agy error]', errorMsg);
     throw new Error(`Antigravity generation error: ${errorMsg}`);
   } finally {
-    try { unlinkSync(tmpPath); } catch {}
+    try { unlinkSync(tmpPath); } catch { }
   }
 }
 
 function parseAgyJson(text: string): { title: string; content: string; seo_description: string; focus_keyword: string } | null {
   // Try direct parse
-  try { return JSON.parse(text); } catch {}
+  try { return JSON.parse(text); } catch { }
   // Strip markdown code fences
   const stripped = text.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/im, '').trim();
-  try { return JSON.parse(stripped); } catch {}
+  try { return JSON.parse(stripped); } catch { }
   // Extract first JSON object
   const m = stripped.match(/\{[\s\S]*\}/);
-  if (m) { try { return JSON.parse(m[0]); } catch {} }
+  if (m) { try { return JSON.parse(m[0]); } catch { } }
   return null;
 }
 
@@ -455,7 +427,6 @@ export async function POST(request: Request) {
       featuredImageUrl,
       imagePrompt,
       autoGenerateImage = true,
-      youtubeUrl,
     } = data;
 
     if (!prompt || !prompt.trim()) {
@@ -495,7 +466,7 @@ You MUST naturally include the following links in the article content:`;
 FOCUS KEYWORD: "${finalFocusKeyword}"
 CONTENT TYPE: ${contentType}
 SITE NAME: ${site.name}
-SITE URL: ${site.url}${backlinkPromptSection}
+SITE URL: ${site.url}${backlinkPromptSection}${youtubeUrl ? `\nYOUTUBE VIDEO: ${youtubeUrl}\nPlease acknowledge or naturally reference this video in the content if relevant.` : ''}
 
 Generate a comprehensive, high-ranking article:
 1. Use real HTML tags only (never write literal words like "H1" or "H2 Heading").
@@ -552,8 +523,7 @@ Generate a comprehensive, high-ranking article:
       site.name,
       site.url,
       resolvedImageUrl,
-      activeBacklinks,
-      youtubeUrl
+      activeBacklinks
     );
 
     // 6. Build WordPress Payload
@@ -679,7 +649,7 @@ Generate a comprehensive, high-ranking article:
                 responseMessage: indexRes.message,
               });
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       } catch {
         // non-blocking

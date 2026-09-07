@@ -333,6 +333,7 @@ function onipress_create_post($request) {
 
     // ── Featured Image Sideload (Base64 from Antigravity IDE or URL) ──
     $featured_media_id = 0;
+    $new_media_url = '';
     if (!empty($request['featured_image_base64'])) {
         $raw_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $request['featured_image_base64']));
         if ($raw_data) {
@@ -358,6 +359,7 @@ function onipress_create_post($request) {
                         update_post_meta($media_id, '_wp_attachment_image_alt', sanitize_text_field($request['focus_keyword']));
                     }
                     $featured_media_id = $media_id;
+                    $new_media_url = wp_get_attachment_url($media_id);
                 }
             }
         }
@@ -373,18 +375,28 @@ function onipress_create_post($request) {
                 update_post_meta($media_id, '_wp_attachment_image_alt', sanitize_text_field($request['focus_keyword']));
             }
             $featured_media_id = $media_id;
+            $new_media_url = wp_get_attachment_url($media_id);
         }
     }
 
-    if ($featured_media_id) {
-        $media_url = wp_get_attachment_url($featured_media_id);
-        if ($media_url) {
-            $post = get_post($post_id);
-            $target_url = !empty($request['featured_image_url']) ? $request['featured_image_url'] : '__ONIPRESS_FEATURED_IMAGE__';
-            $updated_content = str_replace($target_url, $media_url, $post->post_content);
-            if ($updated_content !== $post->post_content) {
-                wp_update_post(['ID' => $post_id, 'post_content' => $updated_content]);
-            }
+    // Replace the local/dummy image URL with the actual WordPress media URL in the post content
+    if ($featured_media_id && $new_media_url) {
+        $updated_content = $post_data['post_content'];
+        $content_changed = false;
+
+        if (!empty($request['featured_image_url']) && strpos($updated_content, $request['featured_image_url']) !== false) {
+            $updated_content = str_replace($request['featured_image_url'], $new_media_url, $updated_content);
+            $content_changed = true;
+        } else if (preg_match('/src="\/images\/[^"]+"/', $updated_content)) {
+            $updated_content = preg_replace('/src="\/images\/[^"]+"/', 'src="' . esc_url($new_media_url) . '"', $updated_content);
+            $content_changed = true;
+        }
+
+        if ($content_changed) {
+            wp_update_post([
+                'ID' => $post_id,
+                'post_content' => $updated_content
+            ]);
         }
     }
 
