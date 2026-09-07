@@ -78,6 +78,7 @@ export default function AutoBlogger() {
   const [autoGenerateImage] = useState(true);
   const [selectedType, setSelectedType]         = useState<ProjectType>('Blog Post');
   const [showForm, setShowForm]                 = useState(true);
+  const [youtubeUrl, setYoutubeUrl]             = useState('');
 
   // Status, Timer & Progress Tracking
   const [status, setStatus]                     = useState<StatusType>('idle');
@@ -171,6 +172,7 @@ export default function AutoBlogger() {
           featuredImageUrl: featuredImageUrl.trim() || undefined,
           imagePrompt: imagePrompt.trim() || undefined,
           autoGenerateImage,
+          youtubeUrl: youtubeUrl.trim() || undefined,
         }),
       });
 
@@ -193,6 +195,7 @@ export default function AutoBlogger() {
         setFocusKeyword('');
         setFeaturedImageUrl('');
         setImagePrompt('');
+        setYoutubeUrl('');
         fetch('/api/posts')
           .then(r => r.json())
           .then(d => setPosts(Array.isArray(d) ? d : []))
@@ -492,6 +495,27 @@ export default function AutoBlogger() {
                 <p className="text-[10px] text-[#a09070] pl-1">
                   ✨ Leave both blank for an automated topic-matched visual, enter an <strong>Image Prompt</strong> to generate a tailored image, or paste an exact <strong>Image URL</strong>.
                 </p>
+              </div>
+
+              {/* Row 5: YouTube Video Options */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">
+                  YouTube Video Link <span className="text-[#a09070]/60 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="e.g. https://www.youtube.com/watch?v=..."
+                  value={youtubeUrl}
+                  onChange={e => setYoutubeUrl(e.target.value)}
+                  className="w-full rounded-xl text-xs text-white px-3 py-2 focus:outline-none transition-all"
+                  style={{
+                    background: 'rgba(0,0,0,0.5)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#faf5ef',
+                  }}
+                  onFocus={e => { e.target.style.borderColor = 'rgba(255,122,24,0.5)'; }}
+                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                />
               </div>
 
               {/* Status Alert with Live Timer and Progressive Feedback */}

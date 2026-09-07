@@ -114,7 +114,8 @@ function sanitizeAndEnforceSeo(
   siteName: string,
   siteUrl: string,
   customImageUrl?: string,
-  backlinks: Backlink[] = []
+  backlinks: Backlink[] = [],
+  youtubeUrl?: string
 ): string {
   let html = rawHtml;
 
@@ -361,6 +362,32 @@ function sanitizeAndEnforceSeo(
     }
   }
 
+  // 12. Embed YouTube Video if provided
+  if (youtubeUrl) {
+    let videoId = '';
+    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+    const match = youtubeUrl.match(ytRegex);
+    if (match && match[1]) {
+      videoId = match[1];
+    }
+    
+    if (videoId) {
+      const embedHtml = `
+<div style="margin: 32px 0; text-align: center;">
+  <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 12px; border: 1px solid #e5e7eb;">
+    <iframe src="https://www.youtube.com/embed/${videoId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;" allowfullscreen title="YouTube Video"></iframe>
+  </div>
+</div>`;
+      
+      const firstH2Close = html.indexOf('</h2>');
+      if (firstH2Close !== -1) {
+        html = html.substring(0, firstH2Close + 5) + embedHtml + html.substring(firstH2Close + 5);
+      } else {
+        html = embedHtml + html;
+      }
+    }
+  }
+
   return html;
 }
 
@@ -427,6 +454,7 @@ export async function POST(request: Request) {
       featuredImageUrl,
       imagePrompt,
       autoGenerateImage = true,
+      youtubeUrl,
     } = data;
 
     if (!prompt || !prompt.trim()) {
@@ -523,7 +551,8 @@ Generate a comprehensive, high-ranking article:
       site.name,
       site.url,
       resolvedImageUrl,
-      activeBacklinks
+      activeBacklinks,
+      youtubeUrl
     );
 
     // 6. Build WordPress Payload
