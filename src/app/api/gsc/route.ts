@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getGscConfig, saveGscConfig, getGscLogs, saveGscLog, GscConfig, GscIndexLog } from '@/lib/db';
+import { getGscConfig, saveGscConfig, getGscLogs, saveGscLog, getSites, GscConfig, GscIndexLog } from '@/lib/db';
 import { submitToGoogleIndexing, querySearchAnalytics, getGoogleAccessToken } from '@/lib/gsc';
+import { queryGa4Analytics } from '@/lib/ga4';
 
 export const runtime = 'nodejs';
 
@@ -18,22 +19,9 @@ export async function GET() {
         : '',
     };
 
+    // Live performance will be fetched on-demand per site instead of globally on load
     let livePerformance = null;
     let performanceError = null;
-
-    if (config.status === 'connected' && config.clientEmail && config.privateKey && config.siteUrl) {
-      try {
-        livePerformance = await querySearchAnalytics(
-          config.clientEmail,
-          config.privateKey,
-          config.siteUrl,
-          28
-        );
-      } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        performanceError = errorMsg || 'Could not fetch live search metrics';
-      }
-    }
 
     return NextResponse.json({
       success: true,
@@ -61,7 +49,6 @@ export async function POST(req: Request) {
       const current = getGscConfig();
       const clientEmail = (body.clientEmail ?? current.clientEmail ?? '').trim();
       let privateKey = (body.privateKey ?? current.privateKey ?? '').trim();
-      const siteUrl = (body.siteUrl ?? current.siteUrl ?? '').trim();
       const autoIndexOnPublish = body.autoIndexOnPublish ?? current.autoIndexOnPublish ?? true;
 
       // Handle raw JSON service account file input
@@ -91,7 +78,6 @@ export async function POST(req: Request) {
       }
 
       const updated: GscConfig = {
-        siteUrl,
         clientEmail: (body as Record<string, unknown>).clientEmail as string || clientEmail,
         privateKey: privateKey || current.privateKey,
         autoIndexOnPublish,
@@ -148,17 +134,30 @@ export async function POST(req: Request) {
     // ── 3. FETCH LIVE SEARCH METRICS ──
     if (action === 'fetch_metrics') {
       const config = getGscConfig();
-      if (!config.clientEmail || !config.privateKey || !config.siteUrl) {
+      if (!config.clientEmail || !config.privateKey) {
         return NextResponse.json(
-          { success: false, error: 'Incomplete GSC setup. Site URL and credentials required.' },
+          { success: false, error: 'Incomplete GSC setup. Credentials required.' },
           { status: 400 }
         );
+      }
+
+      let queryUrl = body.siteUrl;
+      if (body.siteId) {
+        const sites = getSites();
+        const site = sites.find(s => s.id === body.siteId);
+        if (site) {
+          queryUrl = site.gscUrl || site.url;
+        }
+      }
+
+      if (!queryUrl) {
+        return NextResponse.json({ success: false, error: 'Site URL required for metrics' }, { status: 400 });
       }
 
       const metrics = await querySearchAnalytics(
         config.clientEmail,
         config.privateKey,
-        config.siteUrl,
+        queryUrl,
         body.days || 28
       );
 
@@ -166,6 +165,32 @@ export async function POST(req: Request) {
         success: true,
         metrics,
       });
+    }
+
+    // ── 4. FETCH GA4 METRICS ──
+    if (action === 'fetch_ga4_metrics') {
+      const config = getGscConfig();
+      if (!config.clientEmail || !config.privateKey) {
+        return NextResponse.json({ success: false, error: 'GSC credentials required' }, { status: 400 });
+      }
+
+      if (!body.siteId) {
+        return NextResponse.json({ success: false, error: 'Site ID required' }, { status: 400 });
+      }
+
+      const site = getSites().find(s => s.id === body.siteId);
+      if (!site?.ga4PropertyId) {
+        return NextResponse.json({ success: false, error: 'GA4 Property ID not set for this site' }, { status: 400 });
+      }
+
+      const ga4Metrics = await queryGa4Analytics(
+        config.clientEmail,
+        config.privateKey,
+        site.ga4PropertyId,
+        body.days || 28
+      );
+
+      return NextResponse.json({ success: true, metrics: ga4Metrics });
     }
 
     return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });

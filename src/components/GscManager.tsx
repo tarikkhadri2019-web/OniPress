@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 
 interface GscConfig {
-  siteUrl: string;
   clientEmail: string;
   privateKey: string;
   autoIndexOnPublish: boolean;
@@ -59,9 +58,16 @@ interface PerformanceSummary {
   rows: PerformanceRow[];
 }
 
+interface Ga4PerformanceSummary {
+  screenPageViews: number;
+  activeUsers: number;
+  bounceRate: number;
+  averageSessionDuration: number;
+  topPages: { path: string; views: number }[];
+}
+
 export default function GscManager() {
   const [config, setConfig] = useState<GscConfig>({
-    siteUrl: '',
     clientEmail: '',
     privateKey: '',
     autoIndexOnPublish: true,
@@ -72,11 +78,21 @@ export default function GscManager() {
   const [logs, setLogs] = useState<GscLog[]>([]);
   const [performance, setPerformance] = useState<PerformanceSummary | null>(null);
   const [perfError, setPerfError] = useState<string | null>(null);
+  const [ga4Performance, setGa4Performance] = useState<Ga4PerformanceSummary | null>(null);
+  const [ga4PerfError, setGa4PerfError] = useState<string | null>(null);
+  
+  const [sites, setSites] = useState<{id: string, name: string, url: string, gscUrl?: string}[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
   
   const [loading, setLoading] = useState(false);
   const [indexingLoading, setIndexingLoading] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  const fetchSites = async () => {
+    const res = await fetch('/api/sites');
+    return res.json();
+  };
 
   const fetchGscData = async () => {
     const res = await fetch('/api/gsc');
@@ -90,8 +106,6 @@ export default function GscManager() {
         if (data.success) {
           setConfig(data.config || {});
           setLogs(data.logs || []);
-          setPerformance(data.livePerformance || null);
-          setPerfError(data.performanceError || null);
         }
       })
       .catch(() => {
@@ -102,14 +116,58 @@ export default function GscManager() {
       });
   };
 
+  const fetchLivePerformanceForSite = async (siteId: string) => {
+    try {
+      const res = await fetch('/api/gsc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fetch_metrics', siteId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPerformance(data.metrics || null);
+        setPerfError(null);
+      } else {
+        setPerfError(data.error);
+        setPerformance(null);
+      }
+    } catch (e) {
+      setPerfError('Failed to load GSC performance');
+    }
+
+    try {
+      const res = await fetch('/api/gsc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fetch_ga4_metrics', siteId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGa4Performance(data.metrics || null);
+        setGa4PerfError(null);
+      } else {
+        setGa4PerfError(data.error);
+        setGa4Performance(null);
+      }
+    } catch (e) {
+      setGa4PerfError('Failed to load GA4 performance');
+    }
+  };
+
   useEffect(() => {
+    fetchSites().then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        setSites(data);
+        setSelectedSiteId(data[0].id);
+        fetchLivePerformanceForSite(data[0].id);
+      }
+    });
+
     fetchGscData()
       .then(data => {
         if (data.success) {
           setConfig(data.config || {});
           setLogs(data.logs || []);
-          setPerformance(data.livePerformance || null);
-          setPerfError(data.performanceError || null);
         }
       })
       .catch(() => {
@@ -157,7 +215,6 @@ export default function GscManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'save_config',
-          siteUrl: config.siteUrl,
           clientEmail: config.clientEmail,
           privateKey: config.privateKey,
           autoIndexOnPublish: config.autoIndexOnPublish,
@@ -333,7 +390,7 @@ export default function GscManager() {
                 Connect &amp; Test Live Indexing
               </div>
               <p className="text-[#a09070] leading-relaxed">
-                Upload your downloaded JSON key below (or paste its content). Enter your verified Site URL. Click <strong>Verify &amp; Save</strong>. Once connected, your articles will automatically ping Google Indexing API on publish!
+                Upload your downloaded JSON key below (or paste its content) and click <strong>Verify &amp; Save</strong>. Then, go to the <strong>Sites</strong> tab to add the specific Google Search Console URLs for each of your connected WordPress sites!
               </p>
             </div>
           </div>
@@ -353,18 +410,6 @@ export default function GscManager() {
             <div className="text-sm font-bold text-white capitalize flex items-center gap-1.5">
               {config.status === 'connected' ? 'Connected & Verified' : config.status === 'error' ? 'Auth Error' : 'Not Configured'}
               {config.status === 'connected' && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-black/40 border border-white/10 flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-cyan-500/20 text-cyan-400">
-            <Globe className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[11px] text-[#a09070] uppercase font-semibold">Active Search Property</div>
-            <div className="text-sm font-mono text-white truncate max-w-[200px]">
-              {config.siteUrl || 'None set'}
             </div>
           </div>
         </div>
@@ -412,23 +457,6 @@ export default function GscManager() {
             </div>
 
             <form onSubmit={handleSaveConfig} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-[#a09070] font-medium mb-1">
-                  Google Search Console Property URL
-                </label>
-                <input
-                  type="text"
-                  value={config.siteUrl}
-                  onChange={(e) => setConfig({ ...config, siteUrl: e.target.value })}
-                  placeholder="https://example.com/ or sc-domain:example.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#ff7a18] font-mono"
-                  required
-                />
-                <p className="text-[10px] text-[#a09070]/70 mt-1">
-                  Must match exactly the property format registered in Google Search Console.
-                </p>
-              </div>
-
               <div>
                 <label className="block text-[#a09070] font-medium mb-1">
                   Service Account Client Email
@@ -518,12 +546,28 @@ export default function GscManager() {
         {/* Right Column: Live Search Performance Telemetry */}
         <div className="lg:col-span-5 space-y-6">
           <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between">
+              <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-cyan-400" />
-                Google Search Analytics (Last 28 Days)
-              </h3>
-              <span className="text-[10px] font-mono text-[#a09070]">Official GSC Data</span>
+                <h3 className="text-sm font-bold text-white">Google Search Analytics</h3>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedSiteId}
+                  onChange={(e) => {
+                    setSelectedSiteId(e.target.value);
+                    if (e.target.value) fetchLivePerformanceForSite(e.target.value);
+                  }}
+                  className="px-2 py-1 rounded bg-black/50 border border-white/10 text-xs text-white outline-none focus:border-[#ff7a18]"
+                >
+                  <option value="">Select a Site...</option>
+                  {sites.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <span className="text-[10px] font-mono text-[#a09070]">Last 28 Days</span>
+              </div>
             </div>
 
             {performance ? (
@@ -604,7 +648,85 @@ export default function GscManager() {
             )}
           </div>
 
-          {/* Recent Indexing Logs */}
+          {/* GA4 Telemetry */}
+          <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-white">Google Analytics (GA4)</h3>
+            </div>
+
+            {ga4Performance ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div className="flex items-center justify-between text-[11px] text-[#a09070]">
+                      <span>Page Views</span>
+                      <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                    </div>
+                    <div className="text-xl font-bold text-white mt-1">{ga4Performance.screenPageViews.toLocaleString()}</div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div className="flex items-center justify-between text-[11px] text-[#a09070]">
+                      <span>Active Users</span>
+                      <MousePointer className="w-3.5 h-3.5 text-cyan-400" />
+                    </div>
+                    <div className="text-xl font-bold text-white mt-1">{ga4Performance.activeUsers.toLocaleString()}</div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div className="flex items-center justify-between text-[11px] text-[#a09070]">
+                      <span>Bounce Rate</span>
+                      <Percent className="w-3.5 h-3.5 text-[#ff7a18]" />
+                    </div>
+                    <div className="text-xl font-bold text-white mt-1">{ga4Performance.bounceRate}%</div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div className="flex items-center justify-between text-[11px] text-[#a09070]">
+                      <span>Avg Session</span>
+                      <Clock className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <div className="text-xl font-bold text-white mt-1">{ga4Performance.averageSessionDuration}s</div>
+                  </div>
+                </div>
+
+                {/* Top GA4 Pages */}
+                <div>
+                  <div className="text-[11px] font-bold text-[#a09070] uppercase mb-2">
+                    Top Pages (Views)
+                  </div>
+                  {ga4Performance.topPages && ga4Performance.topPages.length > 0 ? (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      {ga4Performance.topPages.map((page, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-black/40 border border-white/5 text-xs">
+                          <span className="text-white font-medium truncate max-w-[200px]">{page.path}</span>
+                          <div className="flex items-center gap-2.5 text-[11px] font-mono text-[#a09070]">
+                            <span className="text-emerald-400">{page.views} views</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-xs text-[#a09070]">
+                      No page views recorded yet in the last 28 days.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center text-xs text-[#a09070] space-y-2">
+                <Globe className="w-8 h-8 text-white/20 mx-auto" />
+                <p>
+                  {ga4PerfError ? (
+                    <span className="text-rose-400 font-mono text-[11px]">{ga4PerfError}</span>
+                  ) : (
+                    'Add a GA4 Property ID in the Site Manager to view traffic.'
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
           <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Clock className="w-4 h-4 text-[#a09070]" />

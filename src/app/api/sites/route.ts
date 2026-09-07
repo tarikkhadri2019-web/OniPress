@@ -18,6 +18,8 @@ export async function POST(request: Request) {
       url: (data.url || '').trim().replace(/\/+$/, ''),
       username: (data.username || '').trim(),
       applicationPassword: (data.applicationPassword || '').trim(),
+      gscUrl: (data.gscUrl || '').trim(),
+      ga4PropertyId: (data.ga4PropertyId || '').trim(),
       tags: data.tags || [],
     };
     

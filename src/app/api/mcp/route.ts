@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSites, getSettings, getPosts, savePost, getGscConfig, saveGscLog, getBacklinks } from '@/lib/db';
 import { submitToGoogleIndexing, querySearchAnalytics } from '@/lib/gsc';
+import { queryGa4Analytics } from '@/lib/ga4';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -106,8 +107,22 @@ const MCP_TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
+        site_id: { type: 'string', description: 'The ID of the site to get metrics for' },
         days: { type: 'number', description: 'Number of past days to query (default 28)', default: 28 },
       },
+      required: ['site_id'],
+    },
+  },
+  {
+    name: 'onipress_ga4_get_metrics',
+    description: 'Query live Google Analytics (GA4) traffic metrics: pageviews, active users, bounce rate, and top pages for a site.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        site_id: { type: 'string', description: 'The ID of the site to get metrics for' },
+        days: { type: 'number', description: 'Number of past days to query (default 28)', default: 28 },
+      },
+      required: ['site_id'],
     },
   },
   {
@@ -461,15 +476,26 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
       // Tool 8: Get live Google Search Console metrics
       if (name === 'onipress_gsc_get_metrics') {
         const config = getGscConfig();
-        if (!config.clientEmail || !config.privateKey || !config.siteUrl) {
-          throw new Error('Google Search Console credentials or siteUrl not configured.');
+        if (!config.clientEmail || !config.privateKey) {
+          throw new Error('Google Search Console credentials not configured.');
         }
+        
+        if (!args?.site_id) {
+          throw new Error('site_id is required');
+        }
+        
+        const site = sites.find(s => s.id === args.site_id);
+        if (!site) {
+          throw new Error('Site not found');
+        }
+        
+        const gscUrl = site.gscUrl || site.url;
 
         const metrics = await querySearchAnalytics(
           config.clientEmail,
           config.privateKey,
-          config.siteUrl,
-          args?.days || 28
+          gscUrl,
+          args.days || 28
         );
 
         return NextResponse.json({
@@ -481,7 +507,42 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
         });
       }
 
-      // Tool 9: List backlinks
+      // Tool 9: Get live Google Analytics (GA4) metrics
+      if (name === 'onipress_ga4_get_metrics') {
+        const config = getGscConfig();
+        if (!config.clientEmail || !config.privateKey) {
+          throw new Error('Google Service Account credentials not configured.');
+        }
+        
+        if (!args?.site_id) {
+          throw new Error('site_id is required');
+        }
+        
+        const site = sites.find(s => s.id === args.site_id);
+        if (!site) {
+          throw new Error('Site not found');
+        }
+        if (!site.ga4PropertyId) {
+          throw new Error('GA4 Property ID not set for this site');
+        }
+
+        const metrics = await queryGa4Analytics(
+          config.clientEmail,
+          config.privateKey,
+          site.ga4PropertyId,
+          args.days || 28
+        );
+
+        return NextResponse.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            content: [{ type: 'text', text: JSON.stringify(metrics, null, 2) }],
+          },
+        });
+      }
+
+      // Tool 10: List backlinks
       if (name === 'onipress_list_backlinks') {
         const links = getBacklinks();
         return NextResponse.json({

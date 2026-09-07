@@ -7,6 +7,8 @@ export interface Site {
   id: string;
   name: string;
   url: string;
+  gscUrl?: string;
+  ga4PropertyId?: string;
   username: string;
   applicationPassword?: string;
   tags: string[];
@@ -218,7 +220,6 @@ export function deleteBacklink(id: string) {
 // GOOGLE SEARCH CONSOLE & INDEXING API ENGINE
 // ─────────────────────────────────────────────
 export interface GscConfig {
-  siteUrl: string;              // e.g. https://myblog.com or sc-domain:myblog.com
   clientEmail: string;          // service account email
   privateKey: string;           // PEM RSA private key
   autoIndexOnPublish: boolean;
@@ -240,7 +241,6 @@ export function getGscConfig(): GscConfig {
   const file = path.join(dataDir, 'gsc_config.json');
   if (!fs.existsSync(file)) {
     return {
-      siteUrl: '',
       clientEmail: '',
       privateKey: '',
       autoIndexOnPublish: true,
@@ -251,7 +251,6 @@ export function getGscConfig(): GscConfig {
     return JSON.parse(fs.readFileSync(file, 'utf-8'));
   } catch {
     return {
-      siteUrl: '',
       clientEmail: '',
       privateKey: '',
       autoIndexOnPublish: true,

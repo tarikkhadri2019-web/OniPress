@@ -13,6 +13,8 @@ export default function SiteManager() {
   const [siteStatuses, setSiteStatuses] = useState<Record<string, SiteStatus>>({});
   const [name, setName]   = useState('');
   const [url, setUrl]     = useState('');
+  const [gscUrl, setGscUrl] = useState('');
+  const [ga4PropertyId, setGa4PropertyId] = useState('');
   const [token, setToken] = useState('');
   const [tags, setTags]   = useState('');
   const [adding, setAdding] = useState(false);
@@ -43,9 +45,9 @@ export default function SiteManager() {
     await fetch('/api/sites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, url, username: 'onipress', applicationPassword: token, tags: tags.split(',').map(t => t.trim()).filter(Boolean) })
+      body: JSON.stringify({ name, url, gscUrl, ga4PropertyId, username: 'onipress', applicationPassword: token, tags: tags.split(',').map(t => t.trim()).filter(Boolean) })
     });
-    setName(''); setUrl(''); setToken(''); setTags('');
+    setName(''); setUrl(''); setGscUrl(''); setGa4PropertyId(''); setToken(''); setTags('');
     setAdding(false);
     loadSites();
   };
@@ -124,6 +126,8 @@ export default function SiteManager() {
           {[
             { label: 'Site Name', value: name, set: setName, placeholder: 'e.g. My Tech Blog', type: 'text' },
             { label: 'WordPress URL', value: url, set: setUrl, placeholder: 'https://example.com', type: 'text' },
+            { label: 'Google Search Console URL (optional)', value: gscUrl, set: setGscUrl, placeholder: 'sc-domain:example.com', type: 'text' },
+            { label: 'GA4 Property ID (optional)', value: ga4PropertyId, set: setGa4PropertyId, placeholder: 'e.g. 123456789', type: 'text' },
             { label: 'OniPress Token', value: token, set: setToken, placeholder: 'Paste token from WP Admin → OniPress', type: 'password' },
             { label: 'Tags (optional, comma separated)', value: tags, set: setTags, placeholder: 'tech, news, morocco', type: 'text' },
           ].map(({ label, value, set, placeholder, type }) => (

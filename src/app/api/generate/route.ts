@@ -427,6 +427,7 @@ export async function POST(request: Request) {
       featuredImageUrl,
       imagePrompt,
       autoGenerateImage = true,
+      youtubeUrl,
     } = data;
 
     if (!prompt || !prompt.trim()) {

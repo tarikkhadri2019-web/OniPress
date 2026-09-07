@@ -60,11 +60,11 @@ In the Google Cloud Console, navigate to **APIs & Services &rarr; Library**:
 
 ### Step 5: Connect in the OniPress Dashboard
 1. Open your OniPress Dashboard (`http://localhost:3000`).
-2. Click the **Google Indexing** tab in the top navigation.
+2. Click the **Search Console** tab in the sidebar.
 3. Click **Select .json Key File** and choose the downloaded JSON file from Step 3 (or paste the email and private key manually).
-4. Enter your exact Search Console property URL (e.g., `https://myblog.com/`).
-5. Ensure **Auto-Ping Google Indexing API when post is published** is checked.
-6. Click **Verify & Save GSC Credentials**.
+4. Ensure **Auto-Ping Google Indexing API when post is published** is checked.
+5. Click **Verify & Save GSC Credentials**.
+6. Go to the **Sites** tab to add the specific Google Search Console property URL (e.g., `https://myblog.com/` or `sc-domain:myblog.com`) for each of your connected WordPress sites.
 
 You will see a glowing green **"Connected & Verified"** badge.
 
