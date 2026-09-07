@@ -17,9 +17,9 @@ const MODELS = [
     provider: 'openrouter',
     items: [
       { value: 'openrouter:meta-llama/llama-3.1-70b-instruct:free', label: 'Llama 3.1 70B (100% Free)' },
-      { value: 'openrouter:google/gemini-2.0-flash-exp:free',       label: 'Gemini 2.0 Flash (100% Free)' },
-      { value: 'openrouter:mistralai/mistral-7b-instruct:free',     label: 'Mistral 7B (100% Free)' },
-      { value: 'openrouter:qwen/qwen-2.5-72b-instruct:free',        label: 'Qwen 2.5 72B (100% Free)' },
+      { value: 'openrouter:google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash (100% Free)' },
+      { value: 'openrouter:mistralai/mistral-7b-instruct:free', label: 'Mistral 7B (100% Free)' },
+      { value: 'openrouter:qwen/qwen-2.5-72b-instruct:free', label: 'Qwen 2.5 72B (100% Free)' },
     ],
   },
   {
@@ -27,16 +27,16 @@ const MODELS = [
     provider: 'google',
     items: [
       { value: 'google:models/gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash (Ultra Fast / Free)' },
-      { value: 'google:models/gemini-1.5-pro-latest',   label: 'Gemini 1.5 Pro (Deep Research / Free)' },
-      { value: 'google:models/gemini-2.0-flash-exp',    label: 'Gemini 2.0 Flash (Next-Gen Free)' },
+      { value: 'google:models/gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro (Deep Research / Free)' },
+      { value: 'google:models/gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Next-Gen Free)' },
     ],
   },
   {
     group: 'OpenAI (Native)',
     provider: 'openai',
     items: [
-      { value: 'openai:gpt-4o',         label: 'GPT-4o — Recommended' },
-      { value: 'openai:gpt-4-turbo',   label: 'GPT-4 Turbo' },
+      { value: 'openai:gpt-4o', label: 'GPT-4o — Recommended' },
+      { value: 'openai:gpt-4-turbo', label: 'GPT-4 Turbo' },
       { value: 'openai:gpt-3.5-turbo', label: 'GPT-3.5 Turbo — Fast' },
     ],
   },
@@ -45,8 +45,8 @@ const MODELS = [
     provider: 'anthropic',
     items: [
       { value: 'anthropic:claude-3-5-sonnet-20240620', label: 'Claude 3.5 Sonnet' },
-      { value: 'anthropic:claude-3-opus-20240229',      label: 'Claude 3 Opus' },
-      { value: 'anthropic:claude-3-haiku-20240307',     label: 'Claude 3 Haiku — Fast' },
+      { value: 'anthropic:claude-3-opus-20240229', label: 'Claude 3 Opus' },
+      { value: 'anthropic:claude-3-haiku-20240307', label: 'Claude 3 Haiku — Fast' },
     ],
   },
   {
@@ -59,33 +59,33 @@ const MODELS = [
 ];
 
 const PROJECT_TYPES: { type: ProjectType; icon: React.ElementType; desc: string }[] = [
-  { type: 'Blog Post',            icon: FileText, desc: 'Long-form SEO article' },
-  { type: 'Newsletter',           icon: Mail,     desc: 'Conversational email copy' },
-  { type: 'Social Post',          icon: Share2,   desc: 'High-engagement viral post' },
-  { type: 'SEO Optimized Article',icon: Sparkles, desc: 'RankMath & Yoast tuned' },
+  { type: 'Blog Post', icon: FileText, desc: 'Long-form SEO article' },
+  { type: 'Newsletter', icon: Mail, desc: 'Conversational email copy' },
+  { type: 'Social Post', icon: Share2, desc: 'High-engagement viral post' },
+  { type: 'SEO Optimized Article', icon: Sparkles, desc: 'RankMath & Yoast tuned' },
 ];
 
 export default function AutoBlogger() {
   const [sites, setSites] = useState<Site[]>([]);
   const [posts, setPosts] = useState<PostRecord[]>([]);
-  const [selectedSite, setSelectedSite]         = useState('');
-  const [selectedModel, setSelectedModel]       = useState('openrouter:meta-llama/llama-3.1-70b-instruct:free');
-  const [prompt, setPrompt]                     = useState('');
-  const [focusKeyword, setFocusKeyword]         = useState('');
-  const [postStatus, setPostStatus]             = useState<'publish' | 'draft'>('publish');
+  const [selectedSite, setSelectedSite] = useState('');
+  const [selectedModel, setSelectedModel] = useState('openrouter:meta-llama/llama-3.1-70b-instruct:free');
+  const [prompt, setPrompt] = useState('');
+  const [focusKeyword, setFocusKeyword] = useState('');
+  const [postStatus, setPostStatus] = useState<'publish' | 'draft'>('publish');
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
-  const [imagePrompt, setImagePrompt]           = useState('');
+  const [imagePrompt, setImagePrompt] = useState('');
   const [autoGenerateImage] = useState(true);
-  const [selectedType, setSelectedType]         = useState<ProjectType>('Blog Post');
-  const [showForm, setShowForm]                 = useState(true);
-  const [youtubeUrl, setYoutubeUrl]             = useState('');
+  const [selectedType, setSelectedType] = useState<ProjectType>('Blog Post');
+  const [showForm, setShowForm] = useState(true);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
 
   // Status, Timer & Progress Tracking
-  const [status, setStatus]                     = useState<StatusType>('idle');
-  const [statusMsg, setStatusMsg]               = useState('');
-  const [secondsElapsed, setSecondsElapsed]     = useState(0);
-  const [resultLink, setResultLink]             = useState('');
-  const [publishedTitle, setPublishedTitle]     = useState('');
+  const [status, setStatus] = useState<StatusType>('idle');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [secondsElapsed, setSecondsElapsed] = useState(0);
+  const [resultLink, setResultLink] = useState('');
+  const [publishedTitle, setPublishedTitle] = useState('');
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -109,9 +109,9 @@ export default function AutoBlogger() {
       .then(r => r.json())
       .then(s => {
         const hasOpenRouter = Boolean(s.openRouterApiKey);
-        const hasOpenAI     = Boolean(s.openaiApiKey);
-        const hasAnthropic  = Boolean(s.anthropicApiKey);
-        const hasGemini     = Boolean(s.geminiApiKey);
+        const hasOpenAI = Boolean(s.openaiApiKey);
+        const hasAnthropic = Boolean(s.anthropicApiKey);
+        const hasGemini = Boolean(s.geminiApiKey);
 
         // Automatically choose the best ready model
         if (hasOpenRouter && !hasOpenAI) {
@@ -122,7 +122,7 @@ export default function AutoBlogger() {
           setSelectedModel('openai:gpt-4o');
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   useEffect(() => {
@@ -199,7 +199,7 @@ export default function AutoBlogger() {
         fetch('/api/posts')
           .then(r => r.json())
           .then(d => setPosts(Array.isArray(d) ? d : []))
-          .catch(() => {});
+          .catch(() => { });
       } else {
         setStatus('error');
         setStatusMsg(data.error || `Server error (${res.status} ${res.statusText})`);
@@ -260,11 +260,10 @@ export default function AutoBlogger() {
               <button
                 key={type}
                 onClick={() => { setSelectedType(type); setShowForm(true); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs text-left transition-all ${
-                  selectedType === type
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs text-left transition-all ${selectedType === type
                     ? 'bg-white/[0.1] border border-[#ff7a18]/30 text-white font-bold shadow-[0_0_12px_rgba(255,122,24,0.15)]'
                     : 'text-[#a09070] hover:bg-white/[0.05] hover:text-white border border-transparent'
-                }`}
+                  }`}
               >
                 <Icon className={`w-4 h-4 shrink-0 ${selectedType === type ? 'text-[#ff7a18]' : 'opacity-50'}`} />
                 <div>
@@ -359,7 +358,7 @@ export default function AutoBlogger() {
                   </Select>
                 </div>
 
-                  {/* AI Engine Badge — No API Key Needed */}
+                {/* AI Engine Badge — No API Key Needed */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">AI Engine</label>
                   <div
@@ -401,22 +400,20 @@ export default function AutoBlogger() {
                     <button
                       type="button"
                       onClick={() => setPostStatus('publish')}
-                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all ${
-                        postStatus === 'publish'
+                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all ${postStatus === 'publish'
                           ? 'bg-[#ff7a18] text-black shadow-[0_0_12px_rgba(255,122,24,0.4)]'
                           : 'bg-black/40 text-[#a09070] border border-white/10 hover:text-white'
-                      }`}
+                        }`}
                     >
                       Publish Live
                     </button>
                     <button
                       type="button"
                       onClick={() => setPostStatus('draft')}
-                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all ${
-                        postStatus === 'draft'
+                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all ${postStatus === 'draft'
                           ? 'bg-[#ff7a18] text-black shadow-[0_0_12px_rgba(255,122,24,0.4)]'
                           : 'bg-black/40 text-[#a09070] border border-white/10 hover:text-white'
-                      }`}
+                        }`}
                     >
                       Save as Draft
                     </button>
@@ -531,8 +528,8 @@ export default function AutoBlogger() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {status === 'generating' && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#ff7a18]" />}
-                      {status === 'success'    && <CheckCircle2 className="w-4 h-4 shrink-0 text-green-400" />}
-                      {status === 'error'      && <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />}
+                      {status === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0 text-green-400" />}
+                      {status === 'error' && <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />}
                       <span className="font-semibold text-white">{statusMsg}</span>
                     </div>
 
@@ -643,11 +640,10 @@ export default function AutoBlogger() {
                           </div>
                         </td>
                         <td className="py-3 px-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            post.status === 'Live'
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${post.status === 'Live'
                               ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                               : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                          }`}>
+                            }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${post.status === 'Live' ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
                             {post.status}
                           </span>
