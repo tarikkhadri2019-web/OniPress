@@ -70,6 +70,7 @@ add_action('rest_api_init', function () {
             'focus_keyword'       => ['required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field'],
             'seo_description'     => ['required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field'],
             'featured_image_url'  => ['required' => false, 'type' => 'string'],
+            'idempotency_key'     => ['required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field'],
             'category_names'      => ['required' => false, 'type' => 'array', 'default' => []],
             'tag_names'           => ['required' => false, 'type' => 'array', 'default' => []],
         ],
@@ -256,6 +257,29 @@ function onipress_attach_image_from_url($image_url, $title, $post_id = 0) {
 
 /** Create Post — core OniPress ability. */
 function onipress_create_post($request) {
+    // ── 0. Idempotency Deduplication Check (ByteByteGo Pattern) ────────
+    $idempotency_key = !empty($request['idempotency_key']) ? sanitize_text_field($request['idempotency_key']) : '';
+    if (!empty($idempotency_key)) {
+        $existing_posts = get_posts([
+            'meta_key'       => '_onipress_idempotency_key',
+            'meta_value'     => $idempotency_key,
+            'post_status'    => ['publish', 'draft', 'pending'],
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+        ]);
+        if (!empty($existing_posts)) {
+            $existing_id = $existing_posts[0];
+            return new WP_REST_Response([
+                'success'           => true,
+                'deduplicated'      => true,
+                'post_id'           => $existing_id,
+                'post_url'          => get_permalink($existing_id),
+                'edit_url'          => get_edit_post_link($existing_id, 'rest'),
+                'featured_media_id' => get_post_thumbnail_id($existing_id) ?: 0,
+            ], 200);
+        }
+    }
+
     // Handle categories
     $category_ids = [];
     if (!empty($request['category_names']) && is_array($request['category_names'])) {
@@ -305,6 +329,11 @@ function onipress_create_post($request) {
         return new WP_Error('onipress_post_failed', $post_id->get_error_message(), ['status' => 500]);
     }
 
+    // Store idempotency key to prevent any duplicate insertion on retries
+    if (!empty($idempotency_key)) {
+        update_post_meta($post_id, '_onipress_idempotency_key', $idempotency_key);
+    }
+
     // ── RankMath SEO Integration ──────────────────────────────────────
     if (!empty($request['focus_keyword'])) {
         $kw = sanitize_text_field($request['focus_keyword']);
@@ -334,6 +363,8 @@ function onipress_create_post($request) {
     // ── Featured Image Sideload (Base64 from Antigravity IDE or URL) ──
     $featured_media_id = 0;
     $new_media_url = '';
+    $kw = !empty($request['focus_keyword']) ? sanitize_text_field($request['focus_keyword']) : $clean_title;
+
     if (!empty($request['featured_image_base64'])) {
         $raw_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $request['featured_image_base64']));
         if ($raw_data) {
@@ -345,9 +376,9 @@ function onipress_create_post($request) {
                 require_once ABSPATH . 'wp-admin/includes/media.php';
                 $attachment = [
                     'post_mime_type' => $upload['type'] ?: 'image/jpeg',
-                  
-                    'post_title'     => $clean_title,
-                    'post_content'   => '',
+                    'post_title'     => $clean_title . ' - ' . $kw,
+                    'post_excerpt'   => $kw,
+                    'post_content'   => $kw,
                     'post_status'    => 'inherit'
                 ];
                 $media_id = wp_insert_attachment($attachment, $file_path, $post_id);
@@ -355,9 +386,7 @@ function onipress_create_post($request) {
                     $attach_data = wp_generate_attachment_metadata($media_id, $file_path);
                     wp_update_attachment_metadata($media_id, $attach_data);
                     set_post_thumbnail($post_id, $media_id);
-                    if (!empty($request['focus_keyword'])) {
-                        update_post_meta($media_id, '_wp_attachment_image_alt', sanitize_text_field($request['focus_keyword']));
-                    }
+                    update_post_meta($media_id, '_wp_attachment_image_alt', $kw);
                     $featured_media_id = $media_id;
                     $new_media_url = wp_get_attachment_url($media_id);
                 }
@@ -371,9 +400,13 @@ function onipress_create_post($request) {
         );
         if (!is_wp_error($media_id)) {
             set_post_thumbnail($post_id, $media_id);
-            if (!empty($request['focus_keyword'])) {
-                update_post_meta($media_id, '_wp_attachment_image_alt', sanitize_text_field($request['focus_keyword']));
-            }
+            update_post_meta($media_id, '_wp_attachment_image_alt', $kw);
+            wp_update_post([
+                'ID'           => $media_id,
+                'post_title'   => $clean_title . ' - ' . $kw,
+                'post_excerpt' => $kw,
+                'post_content' => $kw,
+            ]);
             $featured_media_id = $media_id;
             $new_media_url = wp_get_attachment_url($media_id);
         }
@@ -389,6 +422,13 @@ function onipress_create_post($request) {
             $content_changed = true;
         } else if (preg_match('/src="\/images\/[^"]+"/', $updated_content)) {
             $updated_content = preg_replace('/src="\/images\/[^"]+"/', 'src="' . esc_url($new_media_url) . '"', $updated_content);
+            $content_changed = true;
+        }
+
+        // Guarantee all inline <img> tags have alt containing the primary focus keyword
+        if (!empty($kw) && strpos($updated_content, '<img') !== false) {
+            $updated_content = preg_replace('/<img(?![^>]*\balt=)([^>]+)>/i', '<img alt="' . esc_attr($kw) . '"$1>', $updated_content);
+            $updated_content = preg_replace('/<img([^>]*)\balt=["\']\s*["\']([^>]*)>/i', '<img$1 alt="' . esc_attr($kw) . '"$2>', $updated_content);
             $content_changed = true;
         }
 

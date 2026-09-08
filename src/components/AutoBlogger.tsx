@@ -11,53 +11,6 @@ import {
 type StatusType = 'idle' | 'generating' | 'success' | 'error';
 type ProjectType = 'Blog Post' | 'Newsletter' | 'Social Post' | 'SEO Optimized Article';
 
-const MODELS = [
-  {
-    group: 'OpenRouter (100% Free Models)',
-    provider: 'openrouter',
-    items: [
-      { value: 'openrouter:meta-llama/llama-3.1-70b-instruct:free', label: 'Llama 3.1 70B (100% Free)' },
-      { value: 'openrouter:google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash (100% Free)' },
-      { value: 'openrouter:mistralai/mistral-7b-instruct:free', label: 'Mistral 7B (100% Free)' },
-      { value: 'openrouter:qwen/qwen-2.5-72b-instruct:free', label: 'Qwen 2.5 72B (100% Free)' },
-    ],
-  },
-  {
-    group: 'Google Gemini (Free with Gmail)',
-    provider: 'google',
-    items: [
-      { value: 'google:models/gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash (Ultra Fast / Free)' },
-      { value: 'google:models/gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro (Deep Research / Free)' },
-      { value: 'google:models/gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Next-Gen Free)' },
-    ],
-  },
-  {
-    group: 'OpenAI (Native)',
-    provider: 'openai',
-    items: [
-      { value: 'openai:gpt-4o', label: 'GPT-4o — Recommended' },
-      { value: 'openai:gpt-4-turbo', label: 'GPT-4 Turbo' },
-      { value: 'openai:gpt-3.5-turbo', label: 'GPT-3.5 Turbo — Fast' },
-    ],
-  },
-  {
-    group: 'Anthropic (Native)',
-    provider: 'anthropic',
-    items: [
-      { value: 'anthropic:claude-3-5-sonnet-20240620', label: 'Claude 3.5 Sonnet' },
-      { value: 'anthropic:claude-3-opus-20240229', label: 'Claude 3 Opus' },
-      { value: 'anthropic:claude-3-haiku-20240307', label: 'Claude 3 Haiku — Fast' },
-    ],
-  },
-  {
-    group: 'Custom / Local (Ollama - 100% Free)',
-    provider: 'custom',
-    items: [
-      { value: 'custom', label: '⚙️ Local Ollama / LM Studio (Free on PC)' },
-    ],
-  },
-];
-
 const PROJECT_TYPES: { type: ProjectType; icon: React.ElementType; desc: string }[] = [
   { type: 'Blog Post', icon: FileText, desc: 'Long-form SEO article' },
   { type: 'Newsletter', icon: Mail, desc: 'Conversational email copy' },
@@ -69,13 +22,11 @@ export default function AutoBlogger() {
   const [sites, setSites] = useState<Site[]>([]);
   const [posts, setPosts] = useState<PostRecord[]>([]);
   const [selectedSite, setSelectedSite] = useState('');
-  const [selectedModel, setSelectedModel] = useState('openrouter:meta-llama/llama-3.1-70b-instruct:free');
   const [prompt, setPrompt] = useState('');
   const [focusKeyword, setFocusKeyword] = useState('');
   const [postStatus, setPostStatus] = useState<'publish' | 'draft'>('publish');
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
-  const [autoGenerateImage] = useState(true);
   const [selectedType, setSelectedType] = useState<ProjectType>('Blog Post');
   const [showForm, setShowForm] = useState(true);
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -103,26 +54,6 @@ export default function AutoBlogger() {
       .then(r => r.json())
       .then(d => setPosts(Array.isArray(d) ? d : []))
       .catch(() => setPosts([]));
-
-    // Check which keys are set to intelligently choose default model
-    fetch('/api/settings')
-      .then(r => r.json())
-      .then(s => {
-        const hasOpenRouter = Boolean(s.openRouterApiKey);
-        const hasOpenAI = Boolean(s.openaiApiKey);
-        const hasAnthropic = Boolean(s.anthropicApiKey);
-        const hasGemini = Boolean(s.geminiApiKey);
-
-        // Automatically choose the best ready model
-        if (hasOpenRouter && !hasOpenAI) {
-          setSelectedModel('openrouter:meta-llama/llama-3.1-70b-instruct:free');
-        } else if (hasGemini && !hasOpenAI && !hasOpenRouter) {
-          setSelectedModel('google:models/gemini-1.5-flash-latest');
-        } else if (hasOpenAI) {
-          setSelectedModel('openai:gpt-4o');
-        }
-      })
-      .catch(() => { });
   };
 
   useEffect(() => {
@@ -130,72 +61,60 @@ export default function AutoBlogger() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGenerate = async () => {
     if (!selectedSite || !prompt.trim()) return;
+
     setStatus('generating');
-    setSecondsElapsed(0);
+    setStatusMsg('Antigravity Gemini engine is orchestrating content pipeline…');
     setResultLink('');
     setPublishedTitle('');
-    setStatusMsg('1/3 Connecting to Antigravity (Gemini via Gmail)…');
+    setSecondsElapsed(0);
 
-    // Start live elapsed timer
-    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setSecondsElapsed(sec => {
-        const next = sec + 1;
-        if (next === 12) {
-          setStatusMsg('2/3 Writing deep H2/H3 body content & SEO FAQs via Gemini…');
-        } else if (next === 32) {
-          setStatusMsg('3/3 Publishing directly to WordPress via OniPress…');
-        }
-        return next;
-      });
+      setSecondsElapsed(s => s + 1);
     }, 1000);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 300s (5 minutes) safety timeout
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
 
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
           siteId: selectedSite,
+          model: 'google:gemini-2.5-flash',
           prompt,
           focusKeyword,
           postStatus,
-          contentType: selectedType,
-          featuredImageUrl: featuredImageUrl.trim() || undefined,
-          imagePrompt: imagePrompt.trim() || undefined,
-          autoGenerateImage,
-          youtubeUrl: youtubeUrl.trim() || undefined,
+          featuredImageUrl,
+          imagePrompt,
+          autoGenerateImage: true,
+          projectType: selectedType,
+          youtubeUrl,
         }),
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
       if (timerRef.current) clearInterval(timerRef.current);
 
-      let data: any = {};
-      try {
-        data = await res.json();
-      } catch {
-        data = { error: `Server returned non-JSON response (${res.status} ${res.statusText})` };
-      }
+      const data = await res.json();
 
-      if (res.ok) {
+      if (res.ok && data.success) {
         setStatus('success');
-        setPublishedTitle(data.title || 'Untitled Post');
-        setStatusMsg(`Published to WordPress! (Post #${data.postId})`);
-        setResultLink(data.link || '');
+        setStatusMsg(data.message || 'Article published to WordPress successfully!');
+        if (data.postUrl) setResultLink(data.postUrl);
+        if (data.title) setPublishedTitle(data.title);
+
         setPrompt('');
         setFocusKeyword('');
         setFeaturedImageUrl('');
         setImagePrompt('');
         setYoutubeUrl('');
+
         fetch('/api/posts')
           .then(r => r.json())
           .then(d => setPosts(Array.isArray(d) ? d : []))
@@ -228,16 +147,16 @@ export default function AutoBlogger() {
     <div className="space-y-5">
 
       {/* ── TOP BAR ── */}
-      <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/[0.07]">
+      <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h2 className="text-xl font-black text-white tracking-tight">Write Blog</h2>
-          <p className="text-[11px] text-[#a09070] mt-0.5">
-            Universal AI Auto-Blogger with automatic RankMath &amp; Yoast SEO integration.
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">AI Copywriting Engine</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Autonomous multi-agent blog writer with automatic RankMath &amp; Yoast SEO optimization.
           </p>
         </div>
         <button
           onClick={() => setShowForm(v => !v)}
-          className="oni-btn rounded-full px-4 py-2 text-xs font-bold flex items-center gap-1.5"
+          className="rounded-xl px-4 py-2 text-xs font-bold flex items-center gap-1.5 text-white bg-[#0047FF] hover:bg-[#0037cc] transition-all cursor-pointer shadow-sm"
         >
           <Plus className="w-3.5 h-3.5 stroke-[3]" />
           {showForm ? 'New Project' : '+ New Project'}
@@ -248,27 +167,25 @@ export default function AutoBlogger() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         {/* ═══ LEFT COLUMN — Project Types & Stats ═══ */}
-        <div className="lg:col-span-4 space-y-3">
+        <div className="lg:col-span-4 space-y-4">
 
-          <p className="oni-cursive text-[#ff9940] text-lg px-1">New Project</p>
+          <h3 className="font-bold text-slate-900 text-sm">Project Type</h3>
 
-          <div
-            className="rounded-xl p-3 space-y-1"
-            style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
+          <div className="rounded-xl p-2 space-y-1 bg-slate-50 border border-slate-200">
             {PROJECT_TYPES.map(({ type, icon: Icon, desc }) => (
               <button
                 key={type}
                 onClick={() => { setSelectedType(type); setShowForm(true); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs text-left transition-all ${selectedType === type
-                    ? 'bg-white/[0.1] border border-[#ff7a18]/30 text-white font-bold shadow-[0_0_12px_rgba(255,122,24,0.15)]'
-                    : 'text-[#a09070] hover:bg-white/[0.05] hover:text-white border border-transparent'
-                  }`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs text-left transition-all cursor-pointer ${
+                  selectedType === type
+                    ? 'bg-[#0047FF] text-white font-bold shadow-sm'
+                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${selectedType === type ? 'text-[#ff7a18]' : 'opacity-50'}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${selectedType === type ? 'text-white' : 'text-slate-400'}`} />
                 <div>
                   <div className="font-semibold">{type}</div>
-                  <div className="text-[10px] opacity-60">{desc}</div>
+                  <div className={`text-[10px] ${selectedType === type ? 'text-white/80' : 'text-slate-400'}`}>{desc}</div>
                 </div>
               </button>
             ))}
@@ -276,33 +193,30 @@ export default function AutoBlogger() {
 
           <button
             onClick={() => setShowForm(true)}
-            className="oni-btn w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-1.5"
+            className="w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-2xs"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[3]" /> Create New
+            <Plus className="w-3.5 h-3.5 stroke-[3] text-[#0047FF]" /> Create New Document
           </button>
 
           {/* Quick Metrics Panel */}
-          <div
-            className="rounded-xl p-3.5 space-y-2 text-xs"
-            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}
-          >
-            <div className="flex justify-between items-center text-[#a09070]">
-              <span className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-[#ff7a18]" /> Connected Sites</span>
-              <span className="text-[#ff7a18] font-bold">{sites.length}</span>
+          <div className="rounded-xl p-4 space-y-2.5 text-xs bg-slate-50 border border-slate-200">
+            <div className="flex justify-between items-center text-slate-600">
+              <span className="flex items-center gap-1.5 font-medium"><Globe className="w-3.5 h-3.5 text-[#0047FF]" /> Connected Sites</span>
+              <span className="text-slate-900 font-bold">{sites.length}</span>
             </div>
-            <div className="flex justify-between items-center text-[#a09070]">
-              <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-green-400" /> RankMath SEO</span>
-              <span className="text-green-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Active
+            <div className="flex justify-between items-center text-slate-600">
+              <span className="flex items-center gap-1.5 font-medium"><Sparkles className="w-3.5 h-3.5 text-[#0047FF]" /> RankMath SEO</span>
+              <span className="text-[#0047FF] font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0047FF]" /> Active 100/100
               </span>
             </div>
-            <div className="flex justify-between items-center text-[#a09070]">
-              <span className="flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5 text-[#ff9940]" /> MCP Endpoint</span>
-              <span className="text-[#ff9940] font-mono text-[10px]">/api/mcp</span>
+            <div className="flex justify-between items-center text-slate-600">
+              <span className="flex items-center gap-1.5 font-medium"><KeyRound className="w-3.5 h-3.5 text-[#0047FF]" /> Protocol</span>
+              <span className="text-slate-700 font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-slate-200">MCP REST API</span>
             </div>
-            <div className="flex justify-between items-center text-[#a09070]">
-              <span>Posts Published</span>
-              <span className="text-white font-bold">{posts.filter(p => p.status === 'Live').length}</span>
+            <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200">
+              <span className="font-medium">Articles Published</span>
+              <span className="text-slate-900 font-bold">{posts.filter(p => p.status === 'Live').length}</span>
             </div>
           </div>
         </div>
@@ -312,42 +226,35 @@ export default function AutoBlogger() {
 
           {/* ── GENERATOR FORM ── */}
           {showForm && (
-            <div
-              className="rounded-xl p-5 space-y-4"
-              style={{
-                background: 'rgba(0,0,0,0.45)',
-                border: '1.5px solid rgba(255, 122, 24, 0.25)',
-                boxShadow: '0 0 30px rgba(255, 100, 0, 0.08)',
-              }}
-            >
+            <div className="rounded-xl p-5 space-y-4 bg-slate-50 border border-slate-200/90 shadow-2xs">
               {/* Form header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#ff7a18]" />
-                  <span className="text-sm font-bold text-white">
-                    Generate: <span className="text-[#ff7a18]">{selectedType}</span>
+                  <Sparkles className="w-4 h-4 text-[#0047FF]" />
+                  <span className="text-sm font-bold text-slate-900">
+                    Draft Article: <span className="text-[#0047FF]">{selectedType}</span>
                   </span>
                 </div>
-                <span className="text-[10px] text-[#a09070] bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
-                  🌿 RankMath &amp; Yoast Ready
+                <span className="text-[10px] text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 font-semibold">
+                  RankMath 100/100 Tuned
                 </span>
               </div>
 
               {/* Row 1: Target Site & AI Model */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">
-                    Target Site {activeSite && <span className="text-[#ff7a18] normal-case">({activeSite.url.replace(/^https?:\/\//, '')})</span>}
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                    Target Site {activeSite && <span className="text-[#0047FF] font-normal normal-case">({activeSite.url.replace(/^https?:\/\//, '')})</span>}
                   </label>
                   <Select value={selectedSite} onValueChange={(val) => setSelectedSite(val || '')}>
-                    <SelectTrigger className="oni-input h-9 text-xs w-full">
-                      <span className="truncate text-white font-medium">
+                    <SelectTrigger className="h-9 text-xs w-full bg-white border border-slate-200 text-slate-900">
+                      <span className="truncate text-slate-900 font-medium">
                         {activeSite ? `${activeSite.name} (${activeSite.url.replace(/^https?:\/\//, '')})` : 'Select WordPress site…'}
                       </span>
                     </SelectTrigger>
                     <SelectContent>
                       {sites.length === 0
-                        ? <SelectItem value="__none__" disabled>No sites added yet — go to Site Manager</SelectItem>
+                        ? <SelectItem value="__none__" disabled>No sites added yet — go to Fleet Matrix</SelectItem>
                         : sites.map(s => (
                           <SelectItem key={s.id} value={s.id} className="text-xs">
                             {s.name} ({s.url.replace(/^https?:\/\//, '')})
@@ -358,16 +265,13 @@ export default function AutoBlogger() {
                   </Select>
                 </div>
 
-                {/* AI Engine Badge — No API Key Needed */}
+                {/* AI Engine Badge */}
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">AI Engine</label>
-                  <div
-                    className="flex items-center gap-2 h-9 px-3 rounded-xl"
-                    style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}
-                  >
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }}></span>
-                    <span className="text-xs text-white font-medium">Antigravity (Gemini via Gmail)</span>
-                    <span className="ml-auto text-[10px] text-green-400 font-semibold">● Ready — No API Key</span>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">AI Engine</label>
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-[#0047FF] inline-block shrink-0" />
+                    <span className="text-xs text-slate-900 font-medium">Antigravity (Zero-Cost Gemini)</span>
+                    <span className="ml-auto text-[10px] text-[#0047FF] font-bold">● Active</span>
                   </div>
                 </div>
               </div>
@@ -375,45 +279,40 @@ export default function AutoBlogger() {
               {/* Row 2: Focus Keyword + Post Status */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">
-                    Focus Keyword <span className="text-[#a09070]/60 font-normal">(RankMath target)</span>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                    Focus Keyword <span className="text-slate-400 font-normal">(RankMath target)</span>
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. best productivity tools for remote teams"
                     value={focusKeyword}
                     onChange={e => setFocusKeyword(e.target.value)}
-                    className="w-full rounded-xl text-xs text-white px-3 py-2 focus:outline-none transition-all"
-                    style={{
-                      background: 'rgba(0,0,0,0.5)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#faf5ef',
-                    }}
-                    onFocus={e => { e.target.style.borderColor = 'rgba(255,122,24,0.5)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                    className="w-full rounded-xl text-xs text-slate-900 px-3 py-2 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15 transition-all"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">Publish Status</label>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Publish Status</label>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setPostStatus('publish')}
-                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all ${postStatus === 'publish'
-                          ? 'bg-[#ff7a18] text-black shadow-[0_0_12px_rgba(255,122,24,0.4)]'
-                          : 'bg-black/40 text-[#a09070] border border-white/10 hover:text-white'
-                        }`}
+                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all cursor-pointer ${
+                        postStatus === 'publish'
+                          ? 'bg-[#0047FF] text-white shadow-sm'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                      }`}
                     >
                       Publish Live
                     </button>
                     <button
                       type="button"
                       onClick={() => setPostStatus('draft')}
-                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all ${postStatus === 'draft'
-                          ? 'bg-[#ff7a18] text-black shadow-[0_0_12px_rgba(255,122,24,0.4)]'
-                          : 'bg-black/40 text-[#a09070] border border-white/10 hover:text-white'
-                        }`}
+                      className={`flex-1 py-2 text-xs rounded-xl font-bold transition-all cursor-pointer ${
+                        postStatus === 'draft'
+                          ? 'bg-[#0047FF] text-white shadow-sm'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                      }`}
                     >
                       Save as Draft
                     </button>
@@ -423,131 +322,99 @@ export default function AutoBlogger() {
 
               {/* Row 3: Topic / Prompt */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">Topic / Prompt Instructions</label>
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Article Topic / Directives</label>
                 <textarea
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
                   rows={4}
-                  className="w-full rounded-xl text-xs text-white resize-none focus:outline-none transition-all"
-                  style={{
-                    background: 'rgba(0,0,0,0.5)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    padding: '10px 12px',
-                    color: '#faf5ef',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'rgba(255,122,24,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(255,122,24,0.1)'; }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
-                  placeholder="e.g. 'Write a comprehensive guide comparing the top 7 productivity tools for remote teams in 2026. Highlight key features, pricing comparison, pros and cons table, and FAQ.'"
+                  className="w-full rounded-xl text-xs text-slate-900 resize-none p-3 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15 transition-all"
+                  placeholder="e.g. 'Write an authoritative 2,000-word comparison on modern GPS tracking fleet platforms in 2026. Include technical features, pricing comparison, pros/cons, and FAQ.'"
                 />
               </div>
 
               {/* Row 4: Featured Image Options */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5 text-[#ff7a18]" />
-                    Featured Image <span className="text-[#a09070]/60 font-normal">(Optional)</span>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#0047FF]" />
+                    Featured Image <span className="text-slate-400 font-normal">(Optional)</span>
                   </label>
-                  <span className="text-[10px] text-[#ff9940]">Antigravity IDE Google Imagen or Direct URL</span>
+                  <span className="text-[10px] text-[#0047FF] font-medium">Automatic 16:9 8K Generator</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-[#a09070]">Image Prompt (generate tailored image for this article)</label>
+                    <label className="text-[10px] text-slate-500 font-medium">Image Prompt (tailored visual)</label>
                     <input
                       type="text"
-                      placeholder="e.g. 'Modern minimalist workspace with laptop and notebook, warm ambient sunlight, 8k'"
+                      placeholder="e.g. 'Modern minimalist workspace, cobalt accents, 8k'"
                       value={imagePrompt}
                       onChange={e => setImagePrompt(e.target.value)}
-                      className="w-full rounded-xl text-xs text-white px-3 py-2 focus:outline-none transition-all"
-                      style={{
-                        background: 'rgba(0,0,0,0.5)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#faf5ef',
-                      }}
-                      onFocus={e => { e.target.style.borderColor = 'rgba(255,122,24,0.5)'; }}
-                      onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                      className="w-full rounded-xl text-xs text-slate-900 px-3 py-2 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15 transition-all"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] text-[#a09070]">Direct Image URL (or leave blank to use Image Prompt / smart topic)</label>
+                    <label className="text-[10px] text-slate-500 font-medium">Direct Image URL</label>
                     <input
                       type="url"
-                      placeholder="https://... (direct URL from media library or CDN)"
+                      placeholder="https://... (direct URL from media library)"
                       value={featuredImageUrl}
                       onChange={e => setFeaturedImageUrl(e.target.value)}
-                      className="w-full rounded-xl text-xs text-white px-3 py-2 focus:outline-none transition-all"
-                      style={{
-                        background: 'rgba(0,0,0,0.5)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#faf5ef',
-                      }}
-                      onFocus={e => { e.target.style.borderColor = 'rgba(255,122,24,0.5)'; }}
-                      onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                      className="w-full rounded-xl text-xs text-slate-900 px-3 py-2 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15 transition-all"
                     />
                   </div>
                 </div>
-
-                <p className="text-[10px] text-[#a09070] pl-1">
-                  ✨ Leave both blank for an automated topic-matched visual, enter an <strong>Image Prompt</strong> to generate a tailored image, or paste an exact <strong>Image URL</strong>.
-                </p>
               </div>
 
-              {/* Row 5: YouTube Video Options */}
+              {/* Row 5: YouTube Video Link */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">
-                  YouTube Video Link <span className="text-[#a09070]/60 font-normal">(Optional)</span>
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                  YouTube Video Link <span className="text-slate-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="url"
                   placeholder="e.g. https://www.youtube.com/watch?v=..."
                   value={youtubeUrl}
                   onChange={e => setYoutubeUrl(e.target.value)}
-                  className="w-full rounded-xl text-xs text-white px-3 py-2 focus:outline-none transition-all"
-                  style={{
-                    background: 'rgba(0,0,0,0.5)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#faf5ef',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'rgba(255,122,24,0.5)'; }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                  className="w-full rounded-xl text-xs text-slate-900 px-3 py-2 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15 transition-all"
                 />
               </div>
 
-              {/* Status Alert with Live Timer and Progressive Feedback */}
+              {/* Status Alert with Live Feedback */}
               {status !== 'idle' && (
                 <div
-                  className="p-4 rounded-xl text-xs space-y-2 transition-all"
-                  style={{
-                    background: status === 'success' ? 'rgba(34,197,94,0.1)' : status === 'error' ? 'rgba(239,68,68,0.1)' : 'rgba(255,122,24,0.1)',
-                    border: `1px solid ${status === 'success' ? 'rgba(34,197,94,0.35)' : status === 'error' ? 'rgba(239,68,68,0.35)' : 'rgba(255,122,24,0.35)'}`,
-                    color: status === 'success' ? '#86efac' : status === 'error' ? '#fca5a5' : '#ffb266',
-                  }}
+                  className={`p-4 rounded-xl text-xs space-y-2 transition-all ${
+                    status === 'success'
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                      : status === 'error'
+                      ? 'bg-red-50 border border-red-200 text-red-800'
+                      : 'bg-[#0047FF]/5 border border-[#0047FF]/20 text-slate-900'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {status === 'generating' && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#ff7a18]" />}
-                      {status === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0 text-green-400" />}
-                      {status === 'error' && <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />}
-                      <span className="font-semibold text-white">{statusMsg}</span>
+                      {status === 'generating' && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0047FF]" />}
+                      {status === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />}
+                      {status === 'error' && <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />}
+                      <span className="font-bold">{statusMsg}</span>
                     </div>
 
                     {status === 'generating' && (
-                      <span className="inline-flex items-center gap-1 font-mono text-[11px] text-[#ff7a18] bg-black/40 px-2 py-0.5 rounded-md border border-[#ff7a18]/20">
+                      <span className="inline-flex items-center gap-1 font-mono text-[11px] text-[#0047FF] bg-white px-2 py-0.5 rounded border border-[#0047FF]/20">
                         <Clock className="w-3 h-3 animate-pulse" /> {secondsElapsed}s
                       </span>
                     )}
                   </div>
 
                   {status === 'generating' && (
-                    <p className="text-[10px] text-[#a09070] pl-6">
-                      ✨ Antigravity (Gemini via Gmail) is writing a 1,500+ word SEO article. This takes 30–60 seconds — please keep this tab open!
+                    <p className="text-[10px] text-slate-500 pl-6">
+                      Gemini is generating deep structure and sideloading directly into your WordPress REST API.
                     </p>
                   )}
 
                   {publishedTitle && (
-                    <p className="text-white text-xs pl-6">
+                    <p className="text-slate-900 text-xs pl-6">
                       Title: <strong>{publishedTitle}</strong>
                     </p>
                   )}
@@ -558,7 +425,7 @@ export default function AutoBlogger() {
                         href={resultLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 underline text-[#ff7a18] hover:text-[#ffa04d] font-bold text-xs"
+                        className="inline-flex items-center gap-1.5 underline text-[#0047FF] hover:underline font-bold text-xs"
                       >
                         View live post on WordPress <ExternalLink className="w-3.5 h-3.5" />
                       </a>
@@ -569,13 +436,13 @@ export default function AutoBlogger() {
 
               {/* Submit Action */}
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-[#a09070]">
-                  Target Site: <strong className="text-white">{activeSite?.name || 'No site selected'}</strong>
+                <span className="text-[11px] text-slate-500">
+                  Target Site: <strong className="text-slate-900">{activeSite?.name || 'No site selected'}</strong>
                 </span>
                 <button
                   onClick={handleGenerate}
                   disabled={status === 'generating' || !selectedSite || !prompt.trim()}
-                  className="oni-btn rounded-xl px-7 py-2.5 text-xs font-bold flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="rounded-xl px-7 py-2.5 text-xs font-bold flex items-center gap-2 text-white bg-[#0047FF] hover:bg-[#0037cc] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                 >
                   {status === 'generating' ? (
                     <>
@@ -585,7 +452,7 @@ export default function AutoBlogger() {
                   ) : (
                     <>
                       <Sparkles className="w-3.5 h-3.5" />
-                      Generate &amp; Publish
+                      Generate &amp; Sideload Post
                     </>
                   )}
                 </button>
@@ -596,61 +463,51 @@ export default function AutoBlogger() {
           {/* ── RECENT CONTENT TABLE ── */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="oni-cursive text-[#ff9940] text-lg">Recent Content Activity</p>
-              <span className="text-[10px] text-[#a09070]">{posts.length} posts recorded</span>
+              <h3 className="font-bold text-slate-900 text-base">Recent Content Activity</h3>
+              <span className="text-[11px] text-slate-500 font-medium">{posts.length} posts recorded</span>
             </div>
 
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.3)' }}
-            >
+            <div className="rounded-xl overflow-hidden bg-white border border-slate-200 shadow-2xs">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                    <th className="py-2.5 px-4 text-[#a09070] font-medium">Post</th>
-                    <th className="py-2.5 px-3 text-[#a09070] font-medium">Status</th>
-                    <th className="py-2.5 px-3 text-[#a09070] font-medium">Date</th>
-                    <th className="py-2.5 px-3 text-[#a09070] font-medium">SEO</th>
-                    <th className="py-2.5 px-3 text-right text-[#a09070] font-medium">Actions</th>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="py-2.5 px-4 text-slate-600 font-semibold">Post</th>
+                    <th className="py-2.5 px-3 text-slate-600 font-semibold">Status</th>
+                    <th className="py-2.5 px-3 text-slate-600 font-semibold">Date</th>
+                    <th className="py-2.5 px-3 text-slate-600 font-semibold">SEO</th>
+                    <th className="py-2.5 px-3 text-right text-slate-600 font-semibold">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {posts.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-[#a09070] text-xs">
+                      <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
                         No posts published yet. Select a site and generate your first article above!
                       </td>
                     </tr>
                   ) : (
-                    posts.map((post, i) => (
-                      <tr
-                        key={post.id}
-                        style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : undefined }}
-                        className="hover:bg-white/[0.02] transition-colors group"
-                      >
+                    posts.map(post => (
+                      <tr key={post.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-6 h-6 rounded-lg bg-[#ff7a18]/10 border border-[#ff7a18]/20 flex items-center justify-center shrink-0">
-                              <FileText className="w-3 h-3 text-[#ff7a18]" />
+                            <div className="w-6 h-6 rounded-lg bg-[#0047FF]/10 border border-[#0047FF]/20 flex items-center justify-center shrink-0">
+                              <FileText className="w-3 h-3 text-[#0047FF]" />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-white truncate max-w-[220px]">{post.title}</p>
-                              <p className="text-[10px] text-[#a09070] truncate">{post.siteName}</p>
+                              <p className="font-bold text-slate-900 truncate max-w-[240px]">{post.title}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{post.siteName}</p>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 px-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${post.status === 'Live'
-                              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                              : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                            }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${post.status === 'Live' ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                             {post.status}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-[#a09070] whitespace-nowrap text-[11px]">{post.date}</td>
+                        <td className="py-3 px-3 text-slate-500 whitespace-nowrap text-[11px]">{post.date}</td>
                         <td className="py-3 px-3 whitespace-nowrap">
-                          <span className="font-bold text-[#ff7a18] text-[11px]">{post.performance}</span>
+                          <span className="font-bold text-[#0047FF] text-[11px]">{post.performance}</span>
                         </td>
                         <td className="py-3 px-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
@@ -659,7 +516,7 @@ export default function AutoBlogger() {
                                 href={post.postUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-white/10 text-[#a09070] hover:text-white transition-colors"
+                                className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 text-slate-400 hover:text-[#0047FF] transition-colors"
                                 title="View on WordPress"
                               >
                                 <ExternalLink className="w-3 h-3" />
@@ -667,7 +524,7 @@ export default function AutoBlogger() {
                             )}
                             <button
                               onClick={() => handleDeletePost(post.id)}
-                              className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-red-500/20 text-[#a09070] hover:text-red-400 transition-colors"
+                              className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                               title="Delete record"
                             >
                               <Trash2 className="w-3 h-3" />

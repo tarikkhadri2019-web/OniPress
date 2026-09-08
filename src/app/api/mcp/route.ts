@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getSites, getSettings, getPosts, savePost, getGscConfig, saveGscLog, getBacklinks } from '@/lib/db';
 import { submitToGoogleIndexing, querySearchAnalytics } from '@/lib/gsc';
 import { queryGa4Analytics } from '@/lib/ga4';
@@ -45,6 +46,8 @@ const MCP_TOOLS = [
         focus_keyword: { type: 'string', description: 'Target primary SEO keyword for RankMath' },
         model: { type: 'string', description: 'AI model identifier (e.g., openai:gpt-4o, anthropic:claude-3-5-sonnet-20240620, google:models/gemini-1.5-pro-latest)', default: 'openai:gpt-4o' },
         status: { type: 'string', enum: ['publish', 'draft'], default: 'publish' },
+        youtube_url: { type: 'string', description: 'Optional YouTube video URL to embed' },
+        featured_image_url: { type: 'string', description: 'Optional featured image URL' },
       },
       required: ['site_id', 'prompt'],
     },
@@ -322,7 +325,35 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
           cleanedContent = h2Idx !== -1 ? cleanedContent.substring(0, h2Idx + 5) + defaultTable + cleanedContent.substring(h2Idx + 5) : defaultTable + cleanedContent;
         }
 
-        // Publish to WordPress via OniPress Connect Plugin
+        const activeKeyword = generatedPost.focus_keyword || finalFocusKeyword;
+        const fallbackImg = args.featured_image_url || `https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80`;
+
+        // Ensure inline image with alt containing focus keyword exists
+        if (!cleanedContent.includes('<img') || !cleanedContent.toLowerCase().includes('alt=')) {
+          const inlineFigure = `\n<figure style="margin:24px 0; text-align:center;"><img src="${fallbackImg}" alt="${activeKeyword}" style="width:100%; max-height:450px; object-fit:cover; border-radius:12px;" loading="lazy" /><figcaption style="font-size:12px; color:#6b7280; margin-top:6px;">Strategic framework: ${activeKeyword}</figcaption></figure>\n`;
+          const firstH2Idx = cleanedContent.indexOf('</h2>');
+          cleanedContent = firstH2Idx !== -1 ? cleanedContent.substring(0, firstH2Idx + 5) + inlineFigure + cleanedContent.substring(firstH2Idx + 5) : inlineFigure + cleanedContent;
+        }
+
+        // Embed YouTube video if specified or available
+        if (args.youtube_url) {
+          const ytMatch = args.youtube_url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+          if (ytMatch) {
+            const ytEmbed = `\n<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio" style="margin:28px 0;"><div class="wp-block-embed__wrapper" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:12px;"><iframe style="position:absolute; top:0; left:0; width:100%; height:100%; border:0; border-radius:12px;" src="https://www.youtube.com/embed/${ytMatch[1]}" title="Video Guide: ${activeKeyword}" allowfullscreen loading="lazy"></iframe></div><figcaption style="font-size:12px; color:#6b7280; text-align:center; margin-top:8px;">Featured Video Guide: <strong>${activeKeyword}</strong></figcaption></figure>\n`;
+            const h2Pos = cleanedContent.indexOf('</h2>');
+            const secondH2 = h2Pos !== -1 ? cleanedContent.indexOf('</h2>', h2Pos + 5) : -1;
+            const insertPos = secondH2 !== -1 ? secondH2 + 5 : (h2Pos !== -1 ? h2Pos + 5 : cleanedContent.length);
+            cleanedContent = cleanedContent.substring(0, insertPos) + ytEmbed + cleanedContent.substring(insertPos);
+          }
+        }
+
+        // Publish to WordPress via OniPress Connect Plugin with Idempotency Key
+        const hourBucket = Math.floor(Date.now() / (3600 * 1000));
+        const idempotencyKey = crypto
+          .createHash('sha256')
+          .update(`${site.id}:${activeKeyword.toLowerCase()}:${hourBucket}`)
+          .digest('hex');
+
         const wpRes = await fetch(`${site.url.replace(/\/$/, '')}/wp-json/onipress/v1/posts`, {
           method: 'POST',
           headers: {
@@ -333,8 +364,10 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
             title: generatedPost.title,
             content: cleanedContent,
             status: args.status || 'publish',
-            focus_keyword: generatedPost.focus_keyword || finalFocusKeyword,
+            focus_keyword: activeKeyword,
             seo_description: generatedPost.seo_description,
+            featured_image_url: fallbackImg,
+            idempotency_key: idempotencyKey,
           }),
         });
 
@@ -370,6 +403,13 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
         const site = sites.find(s => s.id === args?.site_id);
         if (!site) throw new Error(`Site ${args?.site_id} not found.`);
 
+        const hourBucket = Math.floor(Date.now() / (3600 * 1000));
+        const pubKw = (args.focus_keyword || args.title || '').toLowerCase();
+        const idempotencyKey = crypto
+          .createHash('sha256')
+          .update(`${site.id}:${pubKw}:${hourBucket}`)
+          .digest('hex');
+
         const wpRes = await fetch(`${site.url.replace(/\/$/, '')}/wp-json/onipress/v1/posts`, {
           method: 'POST',
           headers: {
@@ -383,6 +423,7 @@ Rules: Use real HTML tags (never write literal 'H1' or 'H2 Heading'). Include a 
             focus_keyword: args.focus_keyword,
             seo_description: args.seo_description,
             featured_image_url: args.featured_image_url,
+            idempotency_key: idempotencyKey,
           }),
         });
 

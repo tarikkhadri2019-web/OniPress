@@ -42,6 +42,7 @@ export interface PostRecord {
   hasTable?: boolean;
   hasImageWithAlt?: boolean;
   hasCitations?: boolean;
+  hasVideo?: boolean;
   seoScore?: number;
 }
 
@@ -74,6 +75,26 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
+/**
+ * Atomic file writer: Writes to temporary file and atomically replaces target.
+ * Eliminates race conditions and avoids file corruption during process interruption.
+ */
+function atomicWriteFileSync(filePath: string, data: string): void {
+  const tmpPath = `${filePath}.tmp.${Date.now()}.${Math.random().toString(36).substring(2, 7)}`;
+  fs.writeFileSync(tmpPath, data, 'utf-8');
+  try {
+    fs.renameSync(tmpPath, filePath);
+  } catch {
+    // Fallback for Windows if destination file handle is briefly busy
+    try {
+      fs.copyFileSync(tmpPath, filePath);
+      fs.unlinkSync(tmpPath);
+    } catch {
+      fs.writeFileSync(filePath, data, 'utf-8');
+    }
+  }
+}
+
 export function getSites(): Site[] {
   const file = path.join(dataDir, 'sites.json');
   if (!fs.existsSync(file)) return [];
@@ -86,7 +107,7 @@ export function getSites(): Site[] {
 
 export function saveSites(sites: Site[]) {
   const file = path.join(dataDir, 'sites.json');
-  fs.writeFileSync(file, JSON.stringify(sites, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(sites, null, 2));
 }
 
 export function getSettings(): Settings {
@@ -101,7 +122,7 @@ export function getSettings(): Settings {
 
 export function saveSettings(settings: Settings) {
   const file = path.join(dataDir, 'settings.json');
-  fs.writeFileSync(file, JSON.stringify(settings, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(settings, null, 2));
 }
 
 export function getPosts(): PostRecord[] {
@@ -126,19 +147,19 @@ export function savePost(post: PostRecord) {
     posts.unshift(post);
   }
   const file = path.join(dataDir, 'posts.json');
-  fs.writeFileSync(file, JSON.stringify(posts, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(posts, null, 2));
 }
 
 export function deletePost(id: string) {
   const posts = getPosts().filter(p => p.id !== id);
   const file = path.join(dataDir, 'posts.json');
-  fs.writeFileSync(file, JSON.stringify(posts, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(posts, null, 2));
 }
 
 export function getCampaigns(): Campaign[] {
   const file = path.join(dataDir, 'campaigns.json');
   if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, JSON.stringify([], null, 2));
+    atomicWriteFileSync(file, JSON.stringify([], null, 2));
     return [];
   }
   try {
@@ -150,7 +171,7 @@ export function getCampaigns(): Campaign[] {
 
 export function saveCampaigns(campaigns: Campaign[]) {
   const file = path.join(dataDir, 'campaigns.json');
-  fs.writeFileSync(file, JSON.stringify(campaigns, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(campaigns, null, 2));
 }
 
 export function saveCampaign(campaign: Campaign) {
@@ -185,7 +206,7 @@ export interface Backlink {
 export function getBacklinks(): Backlink[] {
   const file = path.join(dataDir, 'backlinks.json');
   if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, JSON.stringify([], null, 2));
+    atomicWriteFileSync(file, JSON.stringify([], null, 2));
     return [];
   }
   try {
@@ -197,7 +218,7 @@ export function getBacklinks(): Backlink[] {
 
 export function saveBacklinks(backlinks: Backlink[]) {
   const file = path.join(dataDir, 'backlinks.json');
-  fs.writeFileSync(file, JSON.stringify(backlinks, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(backlinks, null, 2));
 }
 
 export function saveBacklink(link: Backlink) {
@@ -232,10 +253,12 @@ export interface GscIndexLog {
   id: string;
   url: string;
   type: 'URL_UPDATED' | 'URL_DELETED';
-  status: 'SUCCESS' | 'FAILED' | 'PENDING';
+  status: 'SUCCESS' | 'FAILED' | 'PENDING' | 'QUOTA_EXHAUSTED';
   submittedAt: string;
   responseMessage?: string;
 }
+
+export const DAILY_GOOGLE_INDEXING_QUOTA = 200;
 
 export function getGscConfig(): GscConfig {
   const file = path.join(dataDir, 'gsc_config.json');
@@ -261,7 +284,7 @@ export function getGscConfig(): GscConfig {
 
 export function saveGscConfig(config: GscConfig) {
   const file = path.join(dataDir, 'gsc_config.json');
-  fs.writeFileSync(file, JSON.stringify(config, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(config, null, 2));
 }
 
 export function getGscLogs(): GscIndexLog[] {
@@ -279,6 +302,17 @@ export function saveGscLog(log: GscIndexLog) {
   logs.unshift(log);
   if (logs.length > 100) logs.pop(); // Keep last 100 entries
   const file = path.join(dataDir, 'gsc_logs.json');
-  fs.writeFileSync(file, JSON.stringify(logs, null, 2));
+  atomicWriteFileSync(file, JSON.stringify(logs, null, 2));
+}
+
+/** Token Bucket: Checks if daily 200 quota for Google Indexing API is available */
+export function getTodayIndexingCount(): number {
+  const logs = getGscLogs();
+  const todayUtc = new Date().toISOString().substring(0, 10);
+  return logs.filter(l => l.submittedAt && l.submittedAt.startsWith(todayUtc) && l.status === 'SUCCESS').length;
+}
+
+export function isIndexingQuotaAvailable(): boolean {
+  return getTodayIndexingCount() < DAILY_GOOGLE_INDEXING_QUOTA;
 }
 

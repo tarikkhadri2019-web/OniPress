@@ -1,36 +1,35 @@
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display, Dancing_Script } from 'next/font/google';
+import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
-const playfair = Playfair_Display({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  style: ['italic'],
-  weight: ['700', '900'],
+  weight: ['600', '700', '800'],
   variable: '--font-display',
 });
 
-const dancing = Dancing_Script({
+const mono = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['700'],
-  variable: '--font-cursive',
+  weight: ['400', '500', '700'],
+  variable: '--font-mono',
 });
 
 export const metadata: Metadata = {
-  title: 'OniPress | AI WordPress Auto-Blogger',
-  description: 'Open-source WordPress AI auto-blogging dashboard powered by Gemini AI via Antigravity.',
+  title: 'OniPress | Autonomous SEO & Orbital Command Bridge',
+  description: 'Enterprise-grade autonomous SEO copywriting, multi-site WordPress fleet management, and Google Search Console Fast Indexing engine.',
   icons: {
-    icon: '/icon.jpg',
-    shortcut: '/icon.jpg',
-    apple: '/icon.jpg',
+    icon: '/oni_logo.png',
+    shortcut: '/oni_logo.png',
+    apple: '/oni_logo.png',
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.variable} ${playfair.variable} ${dancing.variable} font-sans antialiased h-full overflow-hidden`}>
+    <html lang="en" className="scroll-smooth">
+      <body className={`${inter.variable} ${jakarta.variable} ${mono.variable} font-sans antialiased bg-[#f8fafc] text-[#0f172a] min-h-screen`}>
         {children}
       </body>
     </html>

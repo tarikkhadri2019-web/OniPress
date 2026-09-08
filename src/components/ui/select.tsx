@@ -22,7 +22,7 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
-      className={cn("flex flex-1 text-left truncate text-white", className)}
+      className={cn("flex flex-1 text-left truncate text-slate-900", className)}
       {...props}
     />
   )
@@ -41,7 +41,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white transition-all outline-none select-none focus:border-[#ff7a18]/60 focus:ring-2 focus:ring-[#ff7a18]/20 disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-muted-foreground/60",
+        "flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition-all outline-none select-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15 disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-slate-400",
         className
       )}
       {...props}
@@ -49,7 +49,7 @@ function SelectTrigger({
       {children}
       <SelectPrimitive.Icon
         render={
-          <ChevronDownIcon className="pointer-events-none size-4 text-[#a09070] shrink-0" />
+          <ChevronDownIcon className="pointer-events-none size-4 text-slate-400 shrink-0" />
         }
       />
     </SelectPrimitive.Trigger>
@@ -84,7 +84,7 @@ function SelectContent({
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
           className={cn(
-            "relative isolate z-50 max-h-72 min-w-[max(var(--anchor-width),340px)] w-auto max-w-[min(520px,95vw)] overflow-x-hidden overflow-y-auto rounded-xl bg-[#18130d] text-white p-1.5 border border-[#ff7a18]/30 shadow-[0_16px_40px_rgba(0,0,0,0.8),0_0_25px_rgba(255,122,24,0.15)] backdrop-blur-xl duration-100",
+            "relative isolate z-50 max-h-72 min-w-[max(var(--anchor-width),340px)] w-auto max-w-[min(520px,95vw)] overflow-x-hidden overflow-y-auto rounded-xl bg-white text-slate-900 p-1.5 border border-slate-200 shadow-xl backdrop-blur-xl duration-100",
             className
           )}
           {...props}
@@ -106,7 +106,7 @@ function SelectLabel({
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
       className={cn(
-        "px-2.5 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#ff7a18] select-none",
+        "px-2.5 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#0047FF] select-none",
         className
       )}
       {...props}
@@ -123,7 +123,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg py-2 px-2.5 text-xs text-[#faf5ef] outline-hidden select-none transition-colors hover:bg-[#ff7a18]/15 hover:text-[#ff9940] focus:bg-[#ff7a18]/15 focus:text-[#ff9940] data-[highlighted]:bg-[#ff7a18]/15 data-[highlighted]:text-[#ff9940] data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg py-2 px-2.5 text-xs text-slate-800 outline-hidden select-none transition-colors hover:bg-[#0047FF]/10 hover:text-[#0047FF] focus:bg-[#0047FF]/10 focus:text-[#0047FF] data-[highlighted]:bg-[#0047FF]/10 data-[highlighted]:text-[#0047FF] data-disabled:pointer-events-none data-disabled:opacity-50",
         className
       )}
       {...props}
@@ -133,10 +133,10 @@ function SelectItem({
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator
         render={
-          <span className="pointer-events-none flex size-4 items-center justify-center text-[#ff7a18] shrink-0" />
+          <span className="pointer-events-none flex size-4 items-center justify-center text-[#0047FF] shrink-0" />
         }
       >
-        <CheckIcon className="pointer-events-none size-3.5 text-[#ff7a18]" />
+        <CheckIcon className="pointer-events-none size-3.5 text-[#0047FF]" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   )
@@ -149,7 +149,7 @@ function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn("pointer-events-none my-1 h-px bg-white/10", className)}
+      className={cn("pointer-events-none my-1 h-px bg-slate-100", className)}
       {...props}
     />
   )
@@ -163,7 +163,7 @@ function SelectScrollUpButton({
     <SelectPrimitive.ScrollUpArrow
       data-slot="select-scroll-up-button"
       className={cn(
-        "sticky top-0 z-10 flex w-full cursor-default items-center justify-center py-1 text-[#ff7a18] bg-[#18130d]/95 backdrop-blur-sm border-b border-white/5",
+        "sticky top-0 z-10 flex w-full cursor-default items-center justify-center py-1 text-[#0047FF] bg-white/95 backdrop-blur-sm border-b border-slate-100",
         className
       )}
       {...props}
@@ -181,7 +181,7 @@ function SelectScrollDownButton({
     <SelectPrimitive.ScrollDownArrow
       data-slot="select-scroll-down-button"
       className={cn(
-        "sticky bottom-0 z-10 flex w-full cursor-default items-center justify-center py-1 text-[#ff7a18] bg-[#18130d]/95 backdrop-blur-sm border-t border-white/5",
+        "sticky bottom-0 z-10 flex w-full cursor-default items-center justify-center py-1 text-[#0047FF] bg-white/95 backdrop-blur-sm border-t border-slate-100",
         className
       )}
       {...props}

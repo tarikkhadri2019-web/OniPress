@@ -4,7 +4,17 @@ import { promisify } from 'util';
 import { writeFileSync, unlinkSync, existsSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { getSites, savePost, getBacklinks, Backlink, getGscConfig, saveGscLog } from '@/lib/db';
+import crypto from 'crypto';
+import {
+  getSites,
+  savePost,
+  getBacklinks,
+  Backlink,
+  getGscConfig,
+  saveGscLog,
+  isIndexingQuotaAvailable,
+  DAILY_GOOGLE_INDEXING_QUOTA,
+} from '@/lib/db';
 import { submitToGoogleIndexing } from '@/lib/gsc';
 
 const execFileAsync = promisify(execFile);
@@ -105,6 +115,72 @@ async function generateIdeImage(
 }
 
 // ─────────────────────────────────────────────────────────
+// YOUTUBE EMBED RESOLVER (WITH 24H IN-MEMORY CACHING)
+// Prevents redundant network scraping and protects against IP rate-limiting
+// ─────────────────────────────────────────────────────────
+const youtubeCache = new Map<string, { videoId: string; timestamp: number }>();
+const YOUTUBE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+async function resolveYouTubeEmbed(
+  youtubeUrl?: string,
+  focusKeyword?: string,
+  topic?: string
+): Promise<{ embedHtml: string; videoId: string } | null> {
+  let videoId: string | null = null;
+
+  if (youtubeUrl && youtubeUrl.trim()) {
+    const match = youtubeUrl.trim().match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+    if (match) {
+      videoId = match[1];
+    }
+  }
+
+  // If no user YouTube URL provided, check in-memory cache or query YouTube
+  if (!videoId) {
+    const query = (focusKeyword || topic || 'guide').trim().toLowerCase();
+    const cached = youtubeCache.get(query);
+    if (cached && Date.now() - cached.timestamp < YOUTUBE_CACHE_TTL) {
+      videoId = cached.videoId;
+    } else {
+      try {
+        const res = await fetch(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+          signal: AbortSignal.timeout(6000),
+        });
+        if (res.ok) {
+          const text = await res.text();
+          const m = text.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
+          if (m) {
+            videoId = m[1];
+            youtubeCache.set(query, { videoId, timestamp: Date.now() });
+          }
+        }
+      } catch (e) {
+        console.warn('[OniPress YouTube auto-fetch warning]', e);
+      }
+    }
+  }
+
+  if (!videoId) return null;
+
+  const kw = focusKeyword || topic || 'Guide';
+  const embedHtml = `
+<!-- wp:embed {"url":"https://www.youtube.com/watch?v=${videoId}","type":"video","providerNameSlug":"youtube","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
+<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio" style="margin:32px 0;">
+  <div class="wp-block-embed__wrapper" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+    <iframe style="position:absolute; top:0; left:0; width:100%; height:100%; border:0; border-radius:12px;" src="https://www.youtube.com/embed/${videoId}" title="In-Depth Video Guide: ${kw.replace(/"/g, '&quot;')}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+  </div>
+  <figcaption style="font-size:13px; color:#6b7280; text-align:center; margin-top:10px;">Recommended Video: Comprehensive walkthrough on <strong>${kw}</strong></figcaption>
+</figure>
+<!-- /wp:embed -->`;
+
+  return { embedHtml, videoId };
+}
+
+// ─────────────────────────────────────────────────────────
 // POST-PROCESSOR & SANITIZER FOR 100/100 RANKMATH COMPLIANCE
 // ─────────────────────────────────────────────────────────
 function sanitizeAndEnforceSeo(
@@ -114,7 +190,8 @@ function sanitizeAndEnforceSeo(
   siteName: string,
   siteUrl: string,
   customImageUrl?: string,
-  backlinks: Backlink[] = []
+  backlinks: Backlink[] = [],
+  youtubeEmbedHtml?: string
 ): string {
   let html = rawHtml;
 
@@ -253,18 +330,41 @@ function sanitizeAndEnforceSeo(
 
   // 9. Ensure an inline <img> exists with the Focus Keyword as its alt text (RankMath check)
   const escKw = focusKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const effectiveImageUrl = customImageUrl || `https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80`;
+
+  // Fix any existing img tags that lack focus keyword in alt or have placeholder src
+  if (html.includes('<img')) {
+    html = html.replace(/<img([^>]*?)src=["'](?:placeholder\.jpg|image\.(?:jpg|png)|#|blob:[^"']*)?["']([^>]*)>/gi, `<img$1src="${effectiveImageUrl}"$2>`);
+    html = html.replace(/<img((?![^>]*\balt=)[^>]*?)>/gi, `<img alt="${focusKeyword}"$1>`);
+  }
+
   const hasAltImage = new RegExp(`<img[^>]+alt=["'][^"']*${escKw}[^"']*["']`, 'i').test(html);
-  if (!hasAltImage && customImageUrl) {
+  if (!hasAltImage) {
     const contentImage = `
 <figure style="margin:28px 0; text-align:center;">
-  <img src="${customImageUrl}" alt="${focusKeyword}" style="width:100%; max-height:480px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;" loading="lazy" />
-  <figcaption style="font-size:12px; color:#6b7280; margin-top:8px;">Strategic overview for ${focusKeyword}</figcaption>
+  <img src="${effectiveImageUrl}" alt="${focusKeyword}" style="width:100%; max-height:480px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;" loading="lazy" />
+  <figcaption style="font-size:12px; color:#6b7280; margin-top:8px;">Comprehensive overview and strategic framework for ${focusKeyword}</figcaption>
 </figure>`;
     const firstH2Close = html.indexOf('</h2>');
     if (firstH2Close !== -1) {
-      html = html.substring(0, firstH2Close + 5) + contentImage + html.substring(firstH2Close + 5);
+      html = html.substring(0, firstH2Close + 5) + '\n' + contentImage + '\n' + html.substring(firstH2Close + 5);
     } else {
-      html = contentImage + html;
+      html = contentImage + '\n' + html;
+    }
+  }
+
+  // 10. Ensure an embedded responsive YouTube Video exists inside blog content
+  if (youtubeEmbedHtml && !html.includes('youtube.com/embed') && !html.includes('wp-block-embed-youtube')) {
+    const firstH2Close = html.indexOf('</h2>');
+    if (firstH2Close !== -1) {
+      const secondH2Close = html.indexOf('</h2>', firstH2Close + 5);
+      if (secondH2Close !== -1) {
+        html = html.substring(0, secondH2Close + 5) + '\n' + youtubeEmbedHtml + '\n' + html.substring(secondH2Close + 5);
+      } else {
+        html = html.substring(0, firstH2Close + 5) + '\n' + youtubeEmbedHtml + '\n' + html.substring(firstH2Close + 5);
+      }
+    } else {
+      html += '\n' + youtubeEmbedHtml;
     }
   }
 
@@ -516,7 +616,15 @@ Generate a comprehensive, high-ranking article:
       }
     }
 
-    // 5. Enforce RankMath SEO & Sanitize (with backlinks guaranteed)
+    // Guarantee image URL is never empty for RankMath inline image and featured image
+    if (!resolvedImageUrl && !imageBase64) {
+      resolvedImageUrl = `https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80`;
+    }
+
+    // 4b. Resolve YouTube Embed (User-provided URL or auto-fetched top ranking YouTube video)
+    const youtubeData = await resolveYouTubeEmbed(youtubeUrl, activeFocusKeyword, prompt);
+
+    // 5. Enforce RankMath SEO & Sanitize (with backlinks, inline image with alt, and YouTube embed guaranteed)
     const cleanedContent = sanitizeAndEnforceSeo(
       generatedPost.content,
       prompt,
@@ -524,10 +632,17 @@ Generate a comprehensive, high-ranking article:
       site.name,
       site.url,
       resolvedImageUrl,
-      activeBacklinks
+      activeBacklinks,
+      youtubeData?.embedHtml
     );
 
-    // 6. Build WordPress Payload
+    // 6. Build WordPress Payload with Idempotency Key (ByteByteGo Deduplication Pattern)
+    const hourBucket = Math.floor(Date.now() / (3600 * 1000));
+    const idempotencyKey = crypto
+      .createHash('sha256')
+      .update(`${site.id}:${activeFocusKeyword.toLowerCase()}:${hourBucket}`)
+      .digest('hex');
+
     const wpPayload: Record<string, unknown> = {
       title: generatedPost.title,
       content: cleanedContent,
@@ -536,38 +651,55 @@ Generate a comprehensive, high-ranking article:
       seo_description: generatedPost.seo_description,
       featured_image_base64: imageBase64,
       featured_image_url: resolvedImageUrl.startsWith('http') ? resolvedImageUrl : undefined,
+      idempotency_key: idempotencyKey,
     };
 
-    // 7. Push to WordPress via OniPress Connect Plugin
+    // 7. Push to WordPress via OniPress Connect Plugin with Exponential Backoff
     const wpBaseUrl = site.url.replace(/\/$/, '');
     let wpRes: Response | null = null;
     let lastErrorMsg = '';
 
-    // First attempt: try rest_route or /wp-json/
     const endpointsToTry = [
       `${wpBaseUrl}/index.php?rest_route=/onipress/v1/posts`,
       `${wpBaseUrl}/wp-json/onipress/v1/posts`,
     ];
 
     for (const endpoint of endpointsToTry) {
-      try {
-        const attemptRes = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${site.applicationPassword}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(wpPayload),
-          signal: AbortSignal.timeout(60_000),
-        });
+      let attempts = 0;
+      const maxAttempts = 2;
 
-        if (attemptRes.ok || attemptRes.status !== 404) {
-          wpRes = attemptRes;
-          break;
+      while (attempts < maxAttempts) {
+        attempts++;
+        try {
+          const attemptRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${site.applicationPassword}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(wpPayload),
+            signal: AbortSignal.timeout(60_000),
+          });
+
+          // If transient 5xx error, back off and retry once
+          if ((attemptRes.status === 502 || attemptRes.status === 503 || attemptRes.status === 504) && attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+
+          if (attemptRes.ok || attemptRes.status !== 404) {
+            wpRes = attemptRes;
+            break;
+          }
+        } catch (e) {
+          lastErrorMsg = e instanceof Error ? e.message : String(e);
+          if (attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 1500));
+          }
         }
-      } catch (e) {
-        lastErrorMsg = e instanceof Error ? e.message : String(e);
       }
+
+      if (wpRes && wpRes.ok) break;
     }
 
     if (!wpRes) {
@@ -597,6 +729,7 @@ Generate a comprehensive, high-ranking article:
     const hasTable = cleanedContent.includes('<table');
     const hasImageWithAlt = cleanedContent.toLowerCase().includes('alt="' + activeFocusKeyword.toLowerCase()) || cleanedContent.toLowerCase().includes('alt=');
     const hasCitations = cleanedContent.includes('href="http') || cleanedContent.includes('wikipedia.org');
+    const hasVideo = cleanedContent.includes('youtube.com') || cleanedContent.includes('wp-block-embed-youtube');
 
     let passedFactors = 0;
     if (hasKeywordInTitle) passedFactors++;
@@ -605,7 +738,8 @@ Generate a comprehensive, high-ranking article:
     if (hasTable) passedFactors++;
     if (hasImageWithAlt) passedFactors++;
     if (hasCitations) passedFactors++;
-    const seoScore = Math.round((passedFactors / 6) * 100);
+    if (hasVideo) passedFactors++;
+    const seoScore = Math.round((passedFactors / 7) * 100);
 
     // Record in local DB
     savePost({
@@ -626,10 +760,11 @@ Generate a comprehensive, high-ranking article:
       hasTable,
       hasImageWithAlt,
       hasCitations,
+      hasVideo,
       seoScore,
     });
 
-    // Automatically trigger Google Search Console Indexing if configured
+    // Automatically trigger Google Search Console Indexing if configured & quota available
     if (postStatus !== 'draft' && wpData.post_url) {
       try {
         const gscConfig = getGscConfig();
@@ -639,18 +774,29 @@ Generate a comprehensive, high-ranking article:
           gscConfig.clientEmail &&
           gscConfig.privateKey
         ) {
-          submitToGoogleIndexing(gscConfig.clientEmail, gscConfig.privateKey, wpData.post_url)
-            .then((indexRes) => {
-              saveGscLog({
-                id: `gsc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-                url: wpData.post_url,
-                type: 'URL_UPDATED',
-                status: indexRes.success ? 'SUCCESS' : 'FAILED',
-                submittedAt: new Date().toISOString(),
-                responseMessage: indexRes.message,
-              });
-            })
-            .catch(() => { });
+          if (!isIndexingQuotaAvailable()) {
+            saveGscLog({
+              id: `gsc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              url: wpData.post_url,
+              type: 'URL_UPDATED',
+              status: 'QUOTA_EXHAUSTED',
+              submittedAt: new Date().toISOString(),
+              responseMessage: `Daily Google Indexing API limit reached (${DAILY_GOOGLE_INDEXING_QUOTA}/${DAILY_GOOGLE_INDEXING_QUOTA}). Indexing deferred to next cycle.`,
+            });
+          } else {
+            submitToGoogleIndexing(gscConfig.clientEmail, gscConfig.privateKey, wpData.post_url)
+              .then((indexRes) => {
+                saveGscLog({
+                  id: `gsc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                  url: wpData.post_url,
+                  type: 'URL_UPDATED',
+                  status: indexRes.success ? 'SUCCESS' : 'FAILED',
+                  submittedAt: new Date().toISOString(),
+                  responseMessage: indexRes.message,
+                });
+              })
+              .catch(() => { });
+          }
         }
       } catch {
         // non-blocking

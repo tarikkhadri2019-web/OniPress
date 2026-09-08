@@ -152,7 +152,6 @@ export default function CampaignsManager() {
     setRunningTopicId(topic.id);
     setGeneratingStatusMsg(`Calling Antigravity AI for "${topic.title}"...`);
 
-    // Update topic to generating locally
     const updatedTopics = campaign.topics.map(t => 
       t.id === topic.id ? { ...t, status: 'Generating' as const, error: undefined } : t
     );
@@ -183,7 +182,6 @@ export default function CampaignsManager() {
 
       setGeneratingStatusMsg('Published successfully to WordPress!');
 
-      // Mark topic as Published
       const publishedTopics = campaign.topics.map(t => 
         t.id === topic.id ? {
           ...t,
@@ -213,7 +211,6 @@ export default function CampaignsManager() {
     }
   };
 
-  // Add custom topic to campaign
   const handleAddTopic = (campaignId: string) => {
     const input = topicInputs[campaignId];
     if (!input || !input.title.trim()) return;
@@ -240,7 +237,6 @@ export default function CampaignsManager() {
     setTopicInputs(prev => ({ ...prev, [campaignId]: { title: '', focusKeyword: '' } }));
   };
 
-  // Suggest 5 more topics for existing campaign
   const handleSuggestMoreTopics = async (campaignId: string) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
@@ -296,62 +292,62 @@ export default function CampaignsManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.07]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <p className="oni-cursive text-[#ff9940] text-2xl mb-1">AI Daily Content Campaigns</p>
-          <p className="text-xs text-[#a09070]">
-            Automate daily blog topic ideas, manage editorial queues, and launch Antigravity posts with one click.
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Automated Topic Campaigns</h2>
+          <p className="text-xs text-slate-500">
+            Generate programmatic editorial clusters, manage topic pipelines, and sideload with zero manual copywriting.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={loadData}
             disabled={isLoading}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
+            className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors shadow-2xs cursor-pointer"
             title="Refresh Campaigns"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#0047FF]' : ''}`} />
           </button>
-          <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-xs px-3 py-1 rounded-full bg-[#0047FF]/10 text-[#0047FF] border border-[#0047FF]/20 font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0047FF]" />
             {campaigns.filter(c => c.status === 'Active').length} Active Campaigns
           </span>
         </div>
       </div>
 
       {/* Launch New Campaign Form */}
-      <div className="p-5 rounded-2xl bg-black/40 border border-[#ff7a18]/25 space-y-4 shadow-[0_4px_30px_rgba(255,122,24,0.08)]">
-        <div className="flex items-center gap-2 text-sm font-bold text-white">
-          <Sparkles className="w-4 h-4 text-[#ff7a18]" />
+      <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 shadow-2xs">
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+          <Sparkles className="w-4 h-4 text-[#0047FF]" />
           Create New Automated Topic Campaign
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="text-[10px] text-[#a09070] block mb-1">Campaign Name</label>
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">Campaign Name</label>
             <input
               type="text"
-              placeholder="e.g. Sustainable Living & Clean Energy 2026"
+              placeholder="e.g. Clean Energy Fleet Solutions"
               value={newCampaignName}
               onChange={e => setNewCampaignName(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl text-white bg-black/50 border border-white/10 focus:outline-none focus:border-[#ff7a18]"
+              className="w-full px-3 py-2 text-xs rounded-xl text-slate-900 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15"
             />
           </div>
           <div>
-            <label className="text-[10px] text-[#a09070] block mb-1">Target Niche &amp; Keywords</label>
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">Target Niche &amp; Keywords</label>
             <input
               type="text"
-              placeholder="e.g. Eco-friendly home, solar panels, zero waste"
+              placeholder="e.g. Eco logistics, solar fleet, EV trucks"
               value={newCampaignNiche}
               onChange={e => setNewCampaignNiche(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl text-white bg-black/50 border border-white/10 focus:outline-none focus:border-[#ff7a18]"
+              className="w-full px-3 py-2 text-xs rounded-xl text-slate-900 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-2 focus:ring-[#0047FF]/15"
             />
           </div>
           <div>
-            <label className="text-[10px] text-[#a09070] block mb-1">Target WordPress Site</label>
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">Target WordPress Site</label>
             <select
               value={selectedSiteId}
               onChange={e => setSelectedSiteId(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl text-white bg-black/50 border border-white/10 focus:outline-none cursor-pointer focus:border-[#ff7a18]"
+              className="w-full px-3 py-2 text-xs rounded-xl text-slate-900 bg-white border border-slate-200 focus:outline-none cursor-pointer focus:border-[#0047FF]"
             >
               {sites.map(s => (
                 <option key={s.id} value={s.id}>{s.name} ({s.url})</option>
@@ -361,16 +357,16 @@ export default function CampaignsManager() {
         </div>
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-[#a09070]">Publish Frequency:</span>
+            <span className="text-[11px] font-bold text-slate-600">Publish Frequency:</span>
             {(['Daily', 'Twice Daily', 'Weekly'] as const).map(freq => (
               <button
                 key={freq}
                 type="button"
                 onClick={() => setNewCampaignFrequency(freq)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                   newCampaignFrequency === freq
-                    ? 'bg-[#ff7a18]/20 text-[#ff9940] border border-[#ff7a18]/40'
-                    : 'text-[#a09070] bg-white/[0.03] hover:text-white'
+                    ? 'bg-[#0047FF] text-white shadow-2xs'
+                    : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 {freq}
@@ -380,7 +376,7 @@ export default function CampaignsManager() {
           <button
             onClick={handleCreateCampaign}
             disabled={isCreating || !newCampaignName.trim() || !newCampaignNiche.trim()}
-            className="oni-btn px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-40"
+            className="px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-white bg-[#0047FF] hover:bg-[#0037cc] transition-all disabled:opacity-40 cursor-pointer shadow-sm"
           >
             {isCreating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
             {isCreating ? 'Generating Topic Queue...' : 'Create Campaign with 5 Topics'}
@@ -391,11 +387,11 @@ export default function CampaignsManager() {
       {/* Campaigns List */}
       <div className="space-y-4">
         {campaigns.length === 0 ? (
-          <div className="p-8 text-center rounded-2xl bg-black/30 border border-white/5 space-y-3">
-            <Calendar className="w-10 h-10 text-[#ff7a18] mx-auto opacity-70" />
-            <p className="text-sm font-semibold text-white">No campaigns created yet</p>
-            <p className="text-xs text-[#a09070] max-w-md mx-auto">
-              Fill out the form above to launch your first topic cluster. OniPress will create daily blog topic ideas ready for automated publishing.
+          <div className="p-8 text-center rounded-2xl bg-white border border-dashed border-slate-300 space-y-3">
+            <Calendar className="w-10 h-10 text-[#0047FF] mx-auto opacity-70" />
+            <p className="text-sm font-bold text-slate-700">No campaigns created yet</p>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Fill out the form above to launch your first automated topic cluster.
             </p>
           </div>
         ) : (
@@ -409,42 +405,41 @@ export default function CampaignsManager() {
             return (
               <div
                 key={camp.id}
-                className="rounded-2xl border border-white/[0.08] bg-black/30 overflow-hidden transition-all duration-200"
+                className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden transition-all duration-200"
               >
                 {/* Campaign Header Bar */}
                 <div className="p-5 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-bold text-white">{camp.name}</h3>
+                        <h3 className="text-base font-bold text-slate-900">{camp.name}</h3>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                           camp.status === 'Active'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
                           {camp.status}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[#a09070]">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
                           {camp.frequency}
                         </span>
                       </div>
-                      <p className="text-xs text-[#a09070] flex flex-wrap items-center gap-2">
+                      <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
                         <span className="flex items-center gap-1">
-                          <Target className="w-3 h-3 text-[#ff7a18]" /> Niche: <strong className="text-white/90">{camp.niche}</strong>
+                          <Target className="w-3 h-3 text-[#0047FF]" /> Niche: <strong className="text-slate-800">{camp.niche}</strong>
                         </span>
                         <span>·</span>
                         <span className="flex items-center gap-1">
-                          <Globe className="w-3 h-3 text-[#ff7a18]" /> Site: <strong className="text-white/90">{camp.targetSiteName}</strong>
+                          <Globe className="w-3 h-3 text-[#0047FF]" /> Site: <strong className="text-slate-800">{camp.targetSiteName}</strong>
                         </span>
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Big "Start Campaign / Run Next Topic" Action */}
                       <button
                         onClick={() => handleRunNextTopic(camp.id)}
                         disabled={runningTopicId !== null || !nextPendingTopic}
-                        className="oni-btn px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,122,24,0.3)] disabled:opacity-40"
+                        className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-white bg-[#0047FF] hover:bg-[#0037cc] transition-all disabled:opacity-40 cursor-pointer shadow-sm"
                         title={nextPendingTopic ? `Publish next topic: ${nextPendingTopic.title}` : 'All topics published'}
                       >
                         <Zap className="w-3.5 h-3.5 fill-current" />
@@ -453,14 +448,14 @@ export default function CampaignsManager() {
 
                       <button
                         onClick={() => toggleCampaignStatus(camp.id)}
-                        className="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-white/80 border border-white/10 transition-colors"
+                        className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
                       >
                         {camp.status === 'Active' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                       </button>
 
                       <button
                         onClick={() => handleDeleteCampaign(camp.id)}
-                        className="p-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                         title="Delete Campaign"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -468,7 +463,7 @@ export default function CampaignsManager() {
 
                       <button
                         onClick={() => setExpandedCampaignId(isExpanded ? null : camp.id)}
-                        className="p-2 rounded-xl text-white/70 hover:bg-white/5 transition-colors"
+                        className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
                         title="Toggle Topics Queue"
                       >
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -478,15 +473,15 @@ export default function CampaignsManager() {
 
                   {/* Progress Bar */}
                   <div className="space-y-1 pt-1">
-                    <div className="flex justify-between text-[11px] text-[#a09070]">
+                    <div className="flex justify-between text-[11px] text-slate-500">
                       <span>
-                        Daily Editorial Queue: <strong className="text-white">{completedCount} of {totalCount}</strong> articles published
+                        Editorial Queue: <strong className="text-slate-900">{completedCount} of {totalCount}</strong> articles published
                       </span>
-                      <span className="font-bold text-[#ff9940]">{progress}%</span>
+                      <span className="font-bold text-[#0047FF]">{progress}%</span>
                     </div>
-                    <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-[#ff7a18] to-[#ffaa40] rounded-full transition-all duration-500"
+                        className="h-full bg-[#0047FF] rounded-full transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -495,16 +490,16 @@ export default function CampaignsManager() {
 
                 {/* Topics Queue (Expandable) */}
                 {isExpanded && (
-                  <div className="border-t border-white/[0.08] bg-black/50 p-5 space-y-4">
+                  <div className="border-t border-slate-200 bg-slate-50 p-5 space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider text-[#a09070]">
-                        <Calendar className="w-3.5 h-3.5 text-[#ff7a18]" />
-                        Daily Blog Topic Ideas &amp; Publishing Pipeline
+                      <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                        <Calendar className="w-3.5 h-3.5 text-[#0047FF]" />
+                        Topic Queue &amp; Sideload Pipeline
                       </h4>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSuggestMoreTopics(camp.id)}
-                          className="px-3 py-1 rounded-lg bg-[#ff7a18]/10 hover:bg-[#ff7a18]/20 text-[11px] font-semibold text-[#ff9940] border border-[#ff7a18]/30 flex items-center gap-1 transition-colors"
+                          className="px-3 py-1 rounded-lg bg-[#0047FF]/10 hover:bg-[#0047FF]/20 text-[11px] font-bold text-[#0047FF] border border-[#0047FF]/25 flex items-center gap-1 transition-colors cursor-pointer"
                         >
                           <Sparkles className="w-3 h-3" />
                           Suggest 5 More Topics
@@ -522,30 +517,30 @@ export default function CampaignsManager() {
                             key={topic.id}
                             className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                               isGeneratingThis
-                                ? 'bg-[#ff7a18]/10 border-[#ff7a18]/50 animate-pulse'
+                                ? 'bg-[#0047FF]/10 border-[#0047FF] animate-pulse'
                                 : topic.status === 'Published'
-                                ? 'bg-emerald-500/[0.03] border-emerald-500/20'
+                                ? 'bg-white border-slate-200'
                                 : topic.status === 'Failed'
-                                ? 'bg-rose-500/[0.05] border-rose-500/30'
-                                : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                                ? 'bg-red-50 border-red-200'
+                                : 'bg-white border-slate-200'
                             }`}
                           >
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-white/5 text-[#a09070]">
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-slate-100 text-slate-600">
                                   Day {topic.scheduledDay || idx + 1}
                                 </span>
-                                <p className="text-xs font-bold text-white/90">
+                                <p className="text-xs font-bold text-slate-900">
                                   {topic.title}
                                 </p>
                               </div>
-                              <div className="flex flex-wrap items-center gap-3 text-[10px] text-[#a09070]">
-                                <span>Focus Keyword: <strong className="text-[#ff9940]">{topic.focusKeyword}</strong></span>
+                              <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500">
+                                <span>Focus Keyword: <strong className="text-[#0047FF]">{topic.focusKeyword}</strong></span>
                                 {topic.publishedAt && (
-                                  <span>Published: <strong className="text-emerald-400">{topic.publishedAt}</strong></span>
+                                  <span>Published: <strong className="text-emerald-600">{topic.publishedAt}</strong></span>
                                 )}
                                 {topic.error && (
-                                  <span className="text-rose-400 flex items-center gap-1">
+                                  <span className="text-red-500 flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3" /> {topic.error}
                                   </span>
                                 )}
@@ -554,21 +549,21 @@ export default function CampaignsManager() {
 
                             <div className="flex items-center gap-2 shrink-0">
                               {isGeneratingThis ? (
-                                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-[#ff7a18]/20 text-[#ff9940] text-xs font-semibold">
+                                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-[#0047FF]/10 text-[#0047FF] text-xs font-bold">
                                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                                   <span>Generating Post...</span>
                                 </div>
                               ) : topic.status === 'Published' ? (
                                 <div className="flex items-center gap-2">
-                                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-bold flex items-center gap-1 border border-emerald-500/30">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Published
+                                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center gap-1 border border-emerald-200">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Published
                                   </span>
                                   {topic.publishedUrl && (
                                     <a
                                       href={topic.publishedUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#ff7a18] transition-colors"
+                                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#0047FF] transition-colors"
                                       title="Open published post on WordPress"
                                     >
                                       <ExternalLink className="w-3.5 h-3.5" />
@@ -579,7 +574,7 @@ export default function CampaignsManager() {
                                 <button
                                   onClick={() => executeTopicGeneration(camp, topic)}
                                   disabled={runningTopicId !== null}
-                                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#ff7a18]/15 hover:bg-[#ff7a18]/30 text-[#ff9940] border border-[#ff7a18]/30 flex items-center gap-1 transition-colors disabled:opacity-40"
+                                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0047FF]/10 hover:bg-[#0047FF]/20 text-[#0047FF] border border-[#0047FF]/20 flex items-center gap-1 transition-colors disabled:opacity-40 cursor-pointer"
                                 >
                                   <Play className="w-3 h-3 fill-current" />
                                   Generate Now
@@ -593,23 +588,23 @@ export default function CampaignsManager() {
 
                     {/* Active Live Status Bar */}
                     {runningTopicId && (
-                      <div className="p-3 rounded-xl bg-[#ff7a18]/10 border border-[#ff7a18]/30 flex items-center gap-2 text-xs text-[#ff9940]">
-                        <RefreshCw className="w-4 h-4 animate-spin text-[#ff7a18]" />
+                      <div className="p-3 rounded-xl bg-[#0047FF]/10 border border-[#0047FF]/25 flex items-center gap-2 text-xs text-[#0047FF] font-bold">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>{generatingStatusMsg}</span>
                       </div>
                     )}
 
                     {/* Add Custom Topic Input */}
-                    <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row items-center gap-2">
+                    <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center gap-2">
                       <input
                         type="text"
-                        placeholder="Add custom daily topic title (e.g. 10 Zero Waste Kitchen Swaps)"
+                        placeholder="Add custom daily topic title"
                         value={topicInputs[camp.id]?.title || ''}
                         onChange={e => setTopicInputs(prev => ({
                           ...prev,
                           [camp.id]: { ...(prev[camp.id] || { title: '', focusKeyword: '' }), title: e.target.value }
                         }))}
-                        className="flex-1 w-full px-3 py-2 text-xs rounded-xl text-white bg-black/40 border border-white/10 focus:outline-none focus:border-[#ff7a18]"
+                        className="flex-1 w-full px-3 py-2 text-xs rounded-xl text-slate-900 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF]"
                       />
                       <input
                         type="text"
@@ -619,12 +614,12 @@ export default function CampaignsManager() {
                           ...prev,
                           [camp.id]: { ...(prev[camp.id] || { title: '', focusKeyword: '' }), focusKeyword: e.target.value }
                         }))}
-                        className="w-full sm:w-48 px-3 py-2 text-xs rounded-xl text-white bg-black/40 border border-white/10 focus:outline-none focus:border-[#ff7a18]"
+                        className="w-full sm:w-48 px-3 py-2 text-xs rounded-xl text-slate-900 bg-white border border-slate-200 focus:outline-none focus:border-[#0047FF]"
                       />
                       <button
                         onClick={() => handleAddTopic(camp.id)}
                         disabled={!topicInputs[camp.id]?.title?.trim()}
-                        className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-1 transition-colors disabled:opacity-40"
+                        className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold bg-[#0047FF] hover:bg-[#0037cc] text-white flex items-center justify-center gap-1 transition-colors disabled:opacity-40 cursor-pointer shadow-2xs"
                       >
                         <Plus className="w-3.5 h-3.5" /> Add to Queue
                       </button>

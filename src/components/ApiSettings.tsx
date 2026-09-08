@@ -7,7 +7,7 @@ const FIELDS = [
   {
     key: 'geminiApiKey',
     label: 'Google Gemini Key (Free with Gmail)',
-    group: 'Google',
+    group: 'Google Cloud / Gemini',
     placeholder: 'AIza...',
     type: 'password',
     helpLink: 'https://aistudio.google.com/app/apikey',
@@ -16,7 +16,7 @@ const FIELDS = [
   {
     key: 'openRouterApiKey',
     label: 'OpenRouter API Key (Supports :free Models)',
-    group: 'OpenRouter',
+    group: 'OpenRouter Aggregator',
     placeholder: 'sk-or-v1-...',
     type: 'password',
     helpLink: 'https://openrouter.ai/keys',
@@ -43,7 +43,7 @@ const FIELDS = [
   {
     key: 'customApiUrl',
     label: 'Custom Endpoint URL (e.g. Ollama)',
-    group: 'Custom (100% Free / Local)',
+    group: 'Local Engine / Ollama',
     placeholder: 'http://localhost:11434/v1',
     type: 'text',
     helpText: 'Use Ollama or LM Studio running locally on your computer',
@@ -51,19 +51,11 @@ const FIELDS = [
   {
     key: 'customApiKey',
     label: 'Custom API Key (Optional)',
-    group: 'Custom (100% Free / Local)',
+    group: 'Local Engine / Ollama',
     placeholder: 'sk-... (leave blank if local Ollama)',
     type: 'password',
   },
 ];
-
-const GROUP_COLORS: Record<string, string> = {
-  Google:                       '#3b82f6',
-  OpenRouter:                   '#ff7a18',
-  OpenAI:                       '#10b981',
-  Anthropic:                    '#8b5cf6',
-  'Custom (100% Free / Local)': '#eab308',
-};
 
 export default function ApiSettings() {
   const [keys, setKeys]       = useState<Record<string, string>>({});
@@ -98,9 +90,9 @@ export default function ApiSettings() {
   };
 
   const inputStyle = {
-    background:   'rgba(0,0,0,0.5)',
-    border:       '1px solid rgba(255,255,255,0.1)',
-    color:        '#faf5ef',
+    background:   '#ffffff',
+    border:       '1px solid #e2e8f0',
+    color:        '#0f172a',
     borderRadius: '10px',
     fontSize:     '13px',
     padding:      '8px 12px',
@@ -110,7 +102,7 @@ export default function ApiSettings() {
   } as React.CSSProperties;
 
   if (loading) return (
-    <div className="flex items-center gap-2 text-xs text-[#a09070] p-6">
+    <div className="flex items-center gap-2 text-xs text-slate-500 p-6">
       <Loader2 className="w-4 h-4 animate-spin" /> Loading settings…
     </div>
   );
@@ -121,39 +113,37 @@ export default function ApiSettings() {
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="pb-4 border-b border-white/[0.07]">
-        <p className="oni-cursive text-[#ff9940] text-xl mb-0.5">API Settings</p>
-        <p className="text-[11px] text-[#a09070]">
-          Connect any AI provider. Free options include Google Gemini with your Gmail account or OpenRouter :free models.
+      <div className="pb-4 border-b border-slate-200">
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-0.5">Model &amp; API Configuration</h2>
+        <p className="text-xs text-slate-500">
+          Connect external AI inference endpoints. The default Antigravity engine functions locally with zero subscription requirements.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         {groups.map(group => {
           const groupFields = FIELDS.filter(f => f.group === group);
-          const color = GROUP_COLORS[group] || '#a09070';
           return (
             <div
               key={group}
-              className="rounded-xl p-4 space-y-3"
-              style={{ background: 'rgba(0,0,0,0.4)', border: `1px solid ${color}25` }}
+              className="rounded-xl p-4 space-y-3 bg-slate-50 border border-slate-200"
             >
               {/* Group label */}
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
-                <span className="text-xs font-bold" style={{ color }}>{group}</span>
+                <span className="w-2 h-2 rounded-full bg-[#0047FF]" />
+                <span className="text-xs font-bold text-slate-900">{group}</span>
               </div>
 
               {groupFields.map(({ key, label, placeholder, type, helpLink, helpText }) => (
                 <div key={key} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">{label}</label>
+                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">{label}</label>
                     {helpLink && (
                       <a
                         href={helpLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[10px] text-[#ff7a18] hover:underline"
+                        className="inline-flex items-center gap-1 text-[10px] text-[#0047FF] hover:underline font-semibold"
                       >
                         {helpText || 'Get Key'} <ExternalLink className="w-2.5 h-2.5" />
                       </a>
@@ -165,11 +155,11 @@ export default function ApiSettings() {
                     value={keys[key] || ''}
                     onChange={e => setKeys(prev => ({ ...prev, [key]: e.target.value }))}
                     style={inputStyle}
-                    onFocus={e => { e.target.style.borderColor = `${color}80`; e.target.style.boxShadow = `0 0 0 3px ${color}15`; }}
-                    onBlur={e  => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+                    onFocus={e => { e.target.style.borderColor = '#0047FF'; e.target.style.boxShadow = '0 0 0 3px rgba(0, 71, 255, 0.12)'; }}
+                    onBlur={e  => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
                   />
                   {!helpLink && helpText && (
-                    <p className="text-[10px] text-[#a09070]/70 pl-1">{helpText}</p>
+                    <p className="text-[10px] text-slate-400 pl-1">{helpText}</p>
                   )}
                 </div>
               ))}
@@ -178,29 +168,28 @@ export default function ApiSettings() {
         })}
       </div>
 
-      {/* Save button full width */}
+      {/* Save button */}
       <div className="flex items-center gap-4 pt-2">
         <button
           onClick={save}
           disabled={saving}
-          className="oni-btn rounded-xl px-8 py-2.5 text-xs font-bold flex items-center gap-2 disabled:opacity-50"
+          className="rounded-xl px-8 py-2.5 text-xs font-bold flex items-center gap-2 text-white bg-[#0047FF] hover:bg-[#0037cc] transition-all disabled:opacity-50 cursor-pointer shadow-sm"
         >
           {saving
             ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
-            : 'Save All API Keys'
+            : 'Save All Credentials'
           }
         </button>
         {saved && (
-          <span className="flex items-center gap-1.5 text-xs text-green-400 font-semibold">
-            <CheckCircle2 className="w-4 h-4" /> Saved successfully!
+          <span className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Saved successfully!
           </span>
         )}
       </div>
 
       {/* Info note */}
-      <p className="text-[10px] text-[#604030] leading-relaxed border-t border-white/[0.05] pt-4">
-        🔒 All API keys are stored locally in <code className="text-[#ff7a18]">data/settings.json</code> on your computer only.
-        They are never sent to any external server other than the AI provider you select.
+      <p className="text-[10px] text-slate-400 leading-relaxed border-t border-slate-200 pt-4">
+        🔒 Credentials are encrypted and stored locally in <code className="text-[#0047FF] font-mono">data/settings.json</code> on your machine. They are never transmitted to any central telemetry server.
       </p>
     </div>
   );

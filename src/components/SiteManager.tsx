@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// Remove unused Input
 import { Site } from '@/lib/db';
 import { Trash2, Globe, CheckCircle, AlertCircle, Loader2, Plus, Download } from 'lucide-react';
 
@@ -66,51 +65,48 @@ export default function SiteManager() {
 
   const StatusIcon = ({ id }: { id: string }) => {
     const s = siteStatuses[id] || 'unknown';
-    if (s === 'checking') return <Loader2 className="w-3.5 h-3.5 animate-spin text-[#a09070]" />;
-    if (s === 'ok')       return <CheckCircle className="w-3.5 h-3.5 text-green-400" />;
-    if (s === 'error')    return <AlertCircle className="w-3.5 h-3.5 text-red-400" />;
+    if (s === 'checking') return <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />;
+    if (s === 'ok')       return <CheckCircle className="w-3.5 h-3.5 text-[#0047FF]" />;
+    if (s === 'error')    return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
     return null;
   };
 
   const inputStyle = {
-    background: 'rgba(0,0,0,0.5)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    color: '#faf5ef',
+    background: '#ffffff',
+    border: '1px solid #e2e8f0',
+    color: '#0f172a',
     borderRadius: '10px',
     fontSize: '13px',
     padding: '8px 12px',
     width: '100%',
     outline: 'none',
-    transition: 'border-color 0.2s',
+    transition: 'all 0.2s',
   } as React.CSSProperties;
 
   return (
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="pb-4 border-b border-white/[0.07]">
-        <p className="oni-cursive text-[#ff9940] text-xl mb-0.5">Site Manager</p>
-        <p className="text-[11px] text-[#a09070]">Connect your WordPress sites using the OniPress plugin token.</p>
+      <div className="pb-4 border-b border-slate-200">
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-0.5">Fleet Site Manager</h2>
+        <p className="text-xs text-slate-500">Connect and orchestrate your WordPress fleet with direct token authorization.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
 
         {/* ── ADD SITE FORM ── */}
-        <div
-          className="rounded-xl p-5 space-y-4"
-          style={{ background: 'rgba(0,0,0,0.45)', border: '1.5px solid rgba(255,122,24,0.22)', boxShadow: '0 0 30px rgba(255,100,0,0.06)' }}
-        >
+        <div className="rounded-xl p-5 space-y-4 bg-slate-50 border border-slate-200/90 shadow-2xs">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-[#ff7a18]/15 border border-[#ff7a18]/25 flex items-center justify-center">
-                <Plus className="w-3.5 h-3.5 text-[#ff7a18]" />
+              <div className="w-6 h-6 rounded-lg bg-[#0047FF]/10 border border-[#0047FF]/20 flex items-center justify-center">
+                <Plus className="w-3.5 h-3.5 text-[#0047FF]" />
               </div>
-              <span className="text-sm font-bold text-white">Connect a WordPress Site</span>
+              <span className="text-sm font-bold text-slate-900">Connect a WordPress Site</span>
             </div>
             <a
               href="/api/plugin/download?folder=onipress-ai"
               download="onipress-ai.zip"
-              className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-lg bg-[#ff7a18]/15 text-[#ff9940] hover:bg-[#ff7a18]/25 border border-[#ff7a18]/30 transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-lg bg-[#0047FF]/10 text-[#0047FF] hover:bg-[#0047FF]/20 border border-[#0047FF]/25 transition-all"
               title="Download plugin ready to upload to WordPress"
             >
               <Download className="w-3 h-3" />
@@ -118,29 +114,29 @@ export default function SiteManager() {
             </a>
           </div>
 
-          <p className="text-[11px] text-[#a09070]">
-            1. Download the plugin above &rarr; 2. Upload it in WordPress <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong> &rarr; 3. Activate and paste your token below:
+          <p className="text-[11px] text-slate-500">
+            1. Download the plugin above &rarr; 2. Upload in WP <strong>Plugins &rarr; Add New &rarr; Upload</strong> &rarr; 3. Paste the generated token below:
           </p>
 
           {/* Fields */}
           {[
-            { label: 'Site Name', value: name, set: setName, placeholder: 'e.g. My Tech Blog', type: 'text' },
+            { label: 'Site Name', value: name, set: setName, placeholder: 'e.g. Tech Insight Magazine', type: 'text' },
             { label: 'WordPress URL', value: url, set: setUrl, placeholder: 'https://example.com', type: 'text' },
             { label: 'Google Search Console URL (optional)', value: gscUrl, set: setGscUrl, placeholder: 'sc-domain:example.com', type: 'text' },
             { label: 'GA4 Property ID (optional)', value: ga4PropertyId, set: setGa4PropertyId, placeholder: 'e.g. 123456789', type: 'text' },
             { label: 'OniPress Token', value: token, set: setToken, placeholder: 'Paste token from WP Admin → OniPress', type: 'password' },
-            { label: 'Tags (optional, comma separated)', value: tags, set: setTags, placeholder: 'tech, news, morocco', type: 'text' },
+            { label: 'Tags (optional, comma separated)', value: tags, set: setTags, placeholder: 'tech, ai, hardware', type: 'text' },
           ].map(({ label, value, set, placeholder, type }) => (
             <div key={label} className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-[#a09070] uppercase tracking-wide">{label}</label>
+              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">{label}</label>
               <input
                 type={type}
                 placeholder={placeholder}
                 value={value}
                 onChange={e => set(e.target.value)}
                 style={inputStyle}
-                onFocus={e => { e.target.style.borderColor = 'rgba(255,122,24,0.55)'; e.target.style.boxShadow = '0 0 0 3px rgba(255,122,24,0.1)'; }}
-                onBlur={e  => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+                onFocus={e => { e.target.style.borderColor = '#0047FF'; e.target.style.boxShadow = '0 0 0 3px rgba(0, 71, 255, 0.12)'; }}
+                onBlur={e  => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
           ))}
@@ -148,7 +144,7 @@ export default function SiteManager() {
           <button
             onClick={addSite}
             disabled={adding || !name || !url || !token}
-            className="oni-btn w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 text-white bg-[#0047FF] hover:bg-[#0037cc] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
           >
             {adding
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting…</>
@@ -160,26 +156,23 @@ export default function SiteManager() {
         {/* ── CONNECTED SITES ── */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="oni-cursive text-[#ff9940] text-lg">Connected Sites</p>
-            <span className="text-[10px] text-[#a09070] bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+            <h3 className="font-bold text-slate-900 text-base">Connected Sites</h3>
+            <span className="text-[11px] text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 font-semibold">
               {sites.length} site{sites.length !== 1 ? 's' : ''}
             </span>
           </div>
 
           {loading && (
-            <div className="flex items-center gap-2 text-xs text-[#a09070] p-4">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+            <div className="flex items-center gap-2 text-xs text-slate-500 p-4">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading fleet…
             </div>
           )}
 
           {!loading && sites.length === 0 && (
-            <div
-              className="text-center p-8 rounded-xl space-y-2 text-xs text-[#a09070]"
-              style={{ border: '1px dashed rgba(255,122,24,0.2)', background: 'rgba(0,0,0,0.25)' }}
-            >
-              <Globe className="w-8 h-8 mx-auto opacity-25 text-[#ff7a18]" />
-              <p className="font-semibold text-[#a09070]">No sites connected yet.</p>
-              <p>Install <span className="text-[#ff7a18]">OniPress Connect</span> on your WP site and add it here.</p>
+            <div className="text-center p-8 rounded-xl space-y-2 text-xs text-slate-500 border border-dashed border-slate-300 bg-slate-50">
+              <Globe className="w-8 h-8 mx-auto opacity-30 text-[#0047FF]" />
+              <p className="font-semibold text-slate-700">No sites connected yet.</p>
+              <p>Install <span className="text-[#0047FF] font-semibold">OniPress Connect</span> on your WordPress site and add it here.</p>
             </div>
           )}
 
@@ -187,36 +180,35 @@ export default function SiteManager() {
             {sites.map(site => (
               <div
                 key={site.id}
-                className="rounded-xl px-4 py-3"
-                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}
+                className="rounded-xl px-4 py-3 bg-white border border-slate-200 shadow-2xs"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <StatusIcon id={site.id} />
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm text-white truncate">{site.name}</p>
-                      <p className="text-[11px] text-[#a09070] truncate">{site.url}</p>
+                      <p className="font-bold text-sm text-slate-900 truncate">{site.name}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{site.url}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => verifySite(site.id)}
-                      className="text-[11px] px-2.5 py-1 rounded-lg text-[#a09070] hover:text-[#ff7a18] hover:bg-[#ff7a18]/10 transition-all border border-white/10 font-semibold"
+                      className="text-[11px] px-2.5 py-1 rounded-lg text-slate-600 hover:text-[#0047FF] hover:bg-[#0047FF]/10 transition-all border border-slate-200 font-semibold cursor-pointer"
                     >
                       Verify
                     </button>
                     <button
                       onClick={() => deleteSite(site.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400/50 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
                 {Array.isArray(site.tags) && site.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
+                  <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-slate-100">
                     {site.tags.map(t => (
-                      <span key={t} className="px-2 py-0.5 bg-[#ff7a18]/10 text-[#ff9940] text-[10px] rounded-full font-semibold border border-[#ff7a18]/20">
+                      <span key={t} className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] rounded-full font-semibold border border-slate-200">
                         #{t}
                       </span>
                     ))}
