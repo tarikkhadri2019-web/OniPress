@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCampaigns, saveCampaign, deleteCampaign, getSites, Campaign, getSettings } from '@/lib/db';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { writeFileSync, unlinkSync, existsSync } from 'fs';
-import { tmpdir } from 'os';
+import { existsSync } from 'fs';
 import { join } from 'path';
 
 const execFileAsync = promisify(execFile);
@@ -194,8 +193,6 @@ Return ONLY a valid JSON array with NO markdown fences, NO extra text:
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.warn('[OniPress Topic AI Generator warning]', errorMsg);
-  } finally {
-    try { unlinkSync(tmpPath); } catch {}
   }
 
   // Dynamic fallback if CLI unavailable
