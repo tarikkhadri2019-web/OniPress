@@ -95,14 +95,24 @@ async function generateIdeImage(
   try {
     const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? join(process.env.USERPROFILE, 'AppData', 'Local') : '');
     const knownAgyExe = localAppData ? join(localAppData, 'agy', 'bin', 'agy.exe') : '';
-    const agyBinExists = knownAgyExe && existsSync(knownAgyExe);
-    const agyInvocation = agyBinExists ? `& '${knownAgyExe.replace(/\\/g, '/')}'` : '& agy';
+    const executable = (knownAgyExe && existsSync(knownAgyExe)) ? knownAgyExe : 'agy';
 
-    const psCommand = `$env:Path = "$env:LOCALAPPDATA\\agy\\bin;$env:Path"; if (Get-Command agy -ErrorAction SilentlyContinue -or (Test-Path '${knownAgyExe.replace(/\\/g, '/')}')) { ${agyInvocation} -p "${promptText}" --dangerously-skip-permissions }`;
     await execFileAsync(
-      'powershell',
-      ['-NoProfile', '-NonInteractive', '-Command', psCommand],
-      { timeout: 120_000, maxBuffer: 10 * 1024 * 1024, windowsHide: true }
+      executable,
+      [
+        '--effort', 'low',
+        '--dangerously-skip-permissions',
+        '--print', promptText,
+      ],
+      {
+        timeout: 120_000,
+        maxBuffer: 10 * 1024 * 1024,
+        windowsHide: true,
+        env: {
+          ...process.env,
+          PATH: `${localAppData ? join(localAppData, 'agy', 'bin') + ';' : ''}${process.env.PATH || ''}`,
+        },
+      }
     );
 
     if (existsSync(absTargetPath)) {
@@ -577,31 +587,38 @@ async function generateWithAgy(systemPrompt: string, userPrompt: string): Promis
     }
   }
 
-  // ── PROVIDER 4: Antigravity CLI (agy) via local shell (if installed) ──
-  const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}\n\nCRITICAL: Return ONLY the raw JSON object. No markdown. No explanation. No code fences.`;
-  const tmpPath = join(tmpdir(), `onipress_${Date.now()}.txt`);
-  writeFileSync(tmpPath, fullPrompt, 'utf8');
+  // ── PROVIDER 4: Antigravity CLI (agy) Native Binary Execution ──
+  const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}\n\nCRITICAL: Return ONLY a raw JSON object with title, content, seo_description, and focus_keyword. No markdown code blocks.`;
 
   try {
-    const safePath = tmpPath.replace(/\\/g, '/');
     const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? join(process.env.USERPROFILE, 'AppData', 'Local') : '');
     const knownAgyExe = localAppData ? join(localAppData, 'agy', 'bin', 'agy.exe') : '';
-    const agyBinExists = knownAgyExe && existsSync(knownAgyExe);
-    const agyInvocation = agyBinExists ? `& '${knownAgyExe.replace(/\\/g, '/')}'` : '& agy';
+    const executable = (knownAgyExe && existsSync(knownAgyExe)) ? knownAgyExe : 'agy';
 
-    const psCommand = `$env:Path = "$env:LOCALAPPDATA\\agy\\bin;$env:Path"; if (Get-Command agy -ErrorAction SilentlyContinue -or (Test-Path '${knownAgyExe.replace(/\\/g, '/')}')) { Get-Content -Raw '${safePath}' | ${agyInvocation} --effort low --dangerously-skip-permissions --output-format text } else { Write-Error 'AGY_NOT_IN_PATH'; exit 127 }`;
     const { stdout } = await execFileAsync(
-      'powershell',
-      ['-NoProfile', '-NonInteractive', '-Command', psCommand],
-      { timeout: 180_000, maxBuffer: 10 * 1024 * 1024, windowsHide: true }
+      executable,
+      [
+        '--effort', 'low',
+        '--dangerously-skip-permissions',
+        '--output-format', 'text',
+        '--print', fullPrompt,
+      ],
+      {
+        timeout: 240_000,
+        maxBuffer: 20 * 1024 * 1024,
+        windowsHide: true,
+        env: {
+          ...process.env,
+          PATH: `${localAppData ? join(localAppData, 'agy', 'bin') + ';' : ''}${process.env.PATH || ''}`,
+        },
+      }
     );
+
     const result = stdout.trim();
     if (result) return result;
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.warn('[OniPress agy CLI notice]', errorMsg);
-  } finally {
-    try { unlinkSync(tmpPath); } catch { }
   }
 
   // ── ACTIONABLE FALLBACK ERROR ──

@@ -152,22 +152,29 @@ Return ONLY a valid JSON array with NO markdown fences, NO extra text:
     }
   }
 
-  // Try agy CLI if installed
-  const tmpPath = join(tmpdir(), `onipress_topics_${Date.now()}.txt`);
-  writeFileSync(tmpPath, prompt, 'utf8');
-
+  // Try agy CLI directly
   try {
-    const safePath = tmpPath.replace(/\\/g, '/');
     const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? join(process.env.USERPROFILE, 'AppData', 'Local') : '');
     const knownAgyExe = localAppData ? join(localAppData, 'agy', 'bin', 'agy.exe') : '';
-    const agyBinExists = knownAgyExe && existsSync(knownAgyExe);
-    const agyInvocation = agyBinExists ? `& '${knownAgyExe.replace(/\\/g, '/')}'` : '& agy';
+    const executable = (knownAgyExe && existsSync(knownAgyExe)) ? knownAgyExe : 'agy';
 
-    const psCommand = `$env:Path = "$env:LOCALAPPDATA\\agy\\bin;$env:Path"; if (Get-Command agy -ErrorAction SilentlyContinue -or (Test-Path '${knownAgyExe.replace(/\\/g, '/')}')) { Get-Content -Raw '${safePath}' | ${agyInvocation} --effort low --dangerously-skip-permissions --output-format text } else { exit 127 }`;
     const { stdout } = await execFileAsync(
-      'powershell',
-      ['-NoProfile', '-NonInteractive', '-Command', psCommand],
-      { timeout: 60_000, maxBuffer: 5 * 1024 * 1024, windowsHide: true }
+      executable,
+      [
+        '--effort', 'low',
+        '--dangerously-skip-permissions',
+        '--output-format', 'text',
+        '--print', prompt,
+      ],
+      {
+        timeout: 90_000,
+        maxBuffer: 10 * 1024 * 1024,
+        windowsHide: true,
+        env: {
+          ...process.env,
+          PATH: `${localAppData ? join(localAppData, 'agy', 'bin') + ';' : ''}${process.env.PATH || ''}`,
+        },
+      }
     );
 
     const clean = stdout.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/im, '').trim();
