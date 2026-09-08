@@ -144,11 +144,22 @@ OniPress includes a native JSON-RPC MCP server at `http://localhost:3000/api/mcp
 
 ---
 
-## 🔒 Security Posture
+## ⚡ Antigravity CLI Setup & Troubleshooting
 
-- **Zero External Telemetry**: API keys and tokens reside strictly in local files under `data/` (ignored by git).
-- **Constant-Time Cryptography**: WordPress token comparisons utilize `hash_equals()` to prevent timing attacks.
-- **Strict Bearer Authorization**: Unauthorized calls return `HTTP 401 Unauthorized`.
+If you install the Antigravity CLI via:
+```powershell
+irm https://antigravity.google/cli/install.ps1 | iex
+```
+And encounter `The term 'agy' is not recognized` in your active PowerShell session:
+1. **Refresh your active session PATH**:
+   ```powershell
+   $env:Path += ";$env:LOCALAPPDATA\agy\bin"
+   ```
+2. **Verify connectivity**:
+   ```powershell
+   agy --effort low --print "Say hello" --dangerously-skip-permissions
+   ```
+*Note: OniPress also automatically resolves `%LOCALAPPDATA%\agy\bin\agy.exe` directly under the hood.*
 
 ---
 

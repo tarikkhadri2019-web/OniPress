@@ -67,6 +67,11 @@ export default function SupportCenter() {
         <div className="space-y-2">
           {[
             {
+              id: 'fix-path',
+              label: "Fix 'agy not recognized' error (Active Session)",
+              cmd: '$env:Path += ";$env:LOCALAPPDATA\\agy\\bin"',
+            },
+            {
               id: 'test-agy',
               label: 'Test Antigravity CLI Connectivity',
               cmd: 'agy --effort low --print "Say hello" --dangerously-skip-permissions',
@@ -95,6 +100,17 @@ export default function SupportCenter() {
               </button>
             </div>
           ))}
+        </div>
+
+        {/* Troubleshooting Notice */}
+        <div className="p-3.5 rounded-xl bg-blue-50/70 border border-[#0047FF]/25 text-xs text-slate-700 space-y-1">
+          <div className="flex items-center gap-1.5 font-bold text-[#0047FF]">
+            <span>💡</span>
+            <span>Windows Notice: &apos;agy is not recognized&apos; after installer</span>
+          </div>
+          <p className="leading-relaxed">
+            When running <code>irm https://antigravity.google/cli/install.ps1 | iex</code>, Windows installs the binary to <code>%LOCALAPPDATA%\agy\bin\agy.exe</code>. If your existing terminal doesn&apos;t recognize <code>agy</code> yet, run the fix command above or restart your PowerShell window. OniPress automatically resolves this local path directly for all automated generation.
+          </p>
         </div>
       </div>
 

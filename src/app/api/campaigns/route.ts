@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCampaigns, saveCampaign, deleteCampaign, getSites, Campaign, getSettings } from '@/lib/db';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { writeFileSync, unlinkSync } from 'fs';
+import { writeFileSync, unlinkSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -158,7 +158,12 @@ Return ONLY a valid JSON array with NO markdown fences, NO extra text:
 
   try {
     const safePath = tmpPath.replace(/\\/g, '/');
-    const psCommand = `if (Get-Command agy -ErrorAction SilentlyContinue) { Get-Content -Raw '${safePath}' | & agy --effort low --dangerously-skip-permissions --output-format text } else { exit 127 }`;
+    const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? join(process.env.USERPROFILE, 'AppData', 'Local') : '');
+    const knownAgyExe = localAppData ? join(localAppData, 'agy', 'bin', 'agy.exe') : '';
+    const agyBinExists = knownAgyExe && existsSync(knownAgyExe);
+    const agyInvocation = agyBinExists ? `& '${knownAgyExe.replace(/\\/g, '/')}'` : '& agy';
+
+    const psCommand = `$env:Path = "$env:LOCALAPPDATA\\agy\\bin;$env:Path"; if (Get-Command agy -ErrorAction SilentlyContinue -or (Test-Path '${knownAgyExe.replace(/\\/g, '/')}')) { Get-Content -Raw '${safePath}' | ${agyInvocation} --effort low --dangerously-skip-permissions --output-format text } else { exit 127 }`;
     const { stdout } = await execFileAsync(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', psCommand],

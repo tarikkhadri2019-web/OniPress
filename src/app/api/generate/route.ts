@@ -93,7 +93,12 @@ async function generateIdeImage(
   const promptText = `Call generate_image tool with Prompt: 'Editorial cinematic 16:9 featured photograph of ${cleanSubject}, ultra-realistic, professional photography, 8k resolution, clean studio lighting, realistic depth of field', ImageName: '${slug.substring(0, 18)}', AspectRatio: '16:9'. Then find the generated image file and copy it to ${absTargetPath} using run_command.`;
 
   try {
-    const psCommand = `if (Get-Command agy -ErrorAction SilentlyContinue) { & agy -p "${promptText}" --dangerously-skip-permissions }`;
+    const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? join(process.env.USERPROFILE, 'AppData', 'Local') : '');
+    const knownAgyExe = localAppData ? join(localAppData, 'agy', 'bin', 'agy.exe') : '';
+    const agyBinExists = knownAgyExe && existsSync(knownAgyExe);
+    const agyInvocation = agyBinExists ? `& '${knownAgyExe.replace(/\\/g, '/')}'` : '& agy';
+
+    const psCommand = `$env:Path = "$env:LOCALAPPDATA\\agy\\bin;$env:Path"; if (Get-Command agy -ErrorAction SilentlyContinue -or (Test-Path '${knownAgyExe.replace(/\\/g, '/')}')) { ${agyInvocation} -p "${promptText}" --dangerously-skip-permissions }`;
     await execFileAsync(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', psCommand],
@@ -579,8 +584,12 @@ async function generateWithAgy(systemPrompt: string, userPrompt: string): Promis
 
   try {
     const safePath = tmpPath.replace(/\\/g, '/');
-    // Check if agy executable actually exists before executing to prevent unhandled CommandNotFoundException
-    const psCommand = `if (Get-Command agy -ErrorAction SilentlyContinue) { Get-Content -Raw '${safePath}' | & agy --effort low --dangerously-skip-permissions --output-format text } else { Write-Error 'AGY_NOT_IN_PATH'; exit 127 }`;
+    const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? join(process.env.USERPROFILE, 'AppData', 'Local') : '');
+    const knownAgyExe = localAppData ? join(localAppData, 'agy', 'bin', 'agy.exe') : '';
+    const agyBinExists = knownAgyExe && existsSync(knownAgyExe);
+    const agyInvocation = agyBinExists ? `& '${knownAgyExe.replace(/\\/g, '/')}'` : '& agy';
+
+    const psCommand = `$env:Path = "$env:LOCALAPPDATA\\agy\\bin;$env:Path"; if (Get-Command agy -ErrorAction SilentlyContinue -or (Test-Path '${knownAgyExe.replace(/\\/g, '/')}')) { Get-Content -Raw '${safePath}' | ${agyInvocation} --effort low --dangerously-skip-permissions --output-format text } else { Write-Error 'AGY_NOT_IN_PATH'; exit 127 }`;
     const { stdout } = await execFileAsync(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', psCommand],
