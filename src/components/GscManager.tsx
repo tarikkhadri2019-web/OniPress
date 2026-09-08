@@ -21,6 +21,7 @@ import {
   Eye,
   Percent
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger } from './ui/select';
 
 interface GscConfig {
   clientEmail: string;
@@ -545,28 +546,48 @@ export default function GscManager() {
 
         {/* Right Column: Live Search Performance Telemetry */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-bold text-slate-900">Google Search Analytics</h3>
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#0047FF]/10 text-[#0047FF] flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Google Search Analytics</h3>
+                  <p className="text-[11px] text-slate-500">Live search clicks, impressions, and query rankings</p>
+                </div>
               </div>
               
               <div className="flex items-center gap-2">
-                <select
-                  value={selectedSiteId}
-                  onChange={(e) => {
-                    setSelectedSiteId(e.target.value);
-                    if (e.target.value) fetchLivePerformanceForSite(e.target.value);
-                  }}
-                  className="px-2 py-1 rounded bg-slate-50 border border-slate-200 text-xs text-slate-900 outline-none focus:border-[#0047FF]"
-                >
-                  <option value="">Select a Site...</option>
-                  {sites.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-                <span className="text-[10px] font-mono text-slate-500">Last 28 Days</span>
+                <div className="w-44">
+                  <Select
+                    value={selectedSiteId}
+                    onValueChange={(val) => {
+                      setSelectedSiteId(val || '');
+                      if (val) fetchLivePerformanceForSite(val);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-slate-50 border border-slate-200 text-slate-900">
+                      <span className="truncate font-semibold">
+                        {sites.find(s => s.id === selectedSiteId)?.name || 'Select a Site...'}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites.length === 0 ? (
+                        <SelectItem value="__none__" disabled>No sites connected</SelectItem>
+                      ) : (
+                        sites.map(s => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            {s.name} ({s.url.replace(/^https?:\/\//, '')})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span className="shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#0047FF]/10 text-[#0047FF] border border-[#0047FF]/20 whitespace-nowrap">
+                  Last 28 Days
+                </span>
               </div>
             </div>
 
@@ -649,7 +670,7 @@ export default function GscManager() {
           </div>
 
           {/* GA4 Telemetry */}
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
               <h3 className="text-sm font-bold text-slate-900">Google Analytics (GA4)</h3>

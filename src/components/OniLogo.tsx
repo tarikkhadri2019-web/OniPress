@@ -16,7 +16,7 @@ export default function OniLogo({ size = 'md', showSubtitle = true, className = 
       <div className="relative group cursor-pointer">
         <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-white p-1 shadow-sm transition-all duration-200 group-hover:border-[#0047FF]/40 group-hover:shadow-md">
           <Image
-            src="/oni_logo.png"
+            src="/brand_logo.png"
             alt="OniPress Brand Mark"
             width={dim}
             height={dim}

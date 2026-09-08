@@ -17,12 +17,16 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'OniPress | Autonomous SEO & Orbital Command Bridge',
+  title: 'OniPress | Autonomous SEO & Fleet Intelligence',
   description: 'Enterprise-grade autonomous SEO copywriting, multi-site WordPress fleet management, and Google Search Console Fast Indexing engine.',
   icons: {
-    icon: '/oni_logo.png',
-    shortcut: '/oni_logo.png',
-    apple: '/oni_logo.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.png', type: 'image/png' },
+      { url: '/brand_logo.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
 };
 
