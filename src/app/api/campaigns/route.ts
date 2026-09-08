@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCampaigns, saveCampaign, deleteCampaign, getSites, Campaign } from '@/lib/db';
+import { getCampaigns, saveCampaign, deleteCampaign, getSites, Campaign, getSettings } from '@/lib/db';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
@@ -107,12 +107,58 @@ Return ONLY a valid JSON array with NO markdown fences, NO extra text:
   }
 ]`;
 
+  const settings = getSettings();
+  const geminiKey = (settings.geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+
+  // Try Gemini REST API if key is present
+  if (geminiKey) {
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              responseMimeType: 'application/json'
+            }
+          })
+        }
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          const clean = text.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/im, '').trim();
+          const match = clean.match(/\[[\s\S]*\]/);
+          if (match) {
+            const items = JSON.parse(match[0]);
+            if (Array.isArray(items) && items.length > 0) {
+              return items.slice(0, count).map((item: Record<string, unknown>, idx: number) => ({
+                id: `topic-${Date.now()}-${idx + 1}`,
+                title: String(item.title || `${niche} Guide ${idx + 1}`),
+                focusKeyword: String(item.focusKeyword || niche),
+                scheduledDay: idx + 1,
+                status: 'Pending' as const,
+              }));
+            }
+          }
+        }
+      }
+    } catch (gErr) {
+      console.warn('[OniPress Topic Gemini API warning]', gErr);
+    }
+  }
+
+  // Try agy CLI if installed
   const tmpPath = join(tmpdir(), `onipress_topics_${Date.now()}.txt`);
   writeFileSync(tmpPath, prompt, 'utf8');
 
   try {
     const safePath = tmpPath.replace(/\\/g, '/');
-    const psCommand = `Get-Content -Raw '${safePath}' | & agy --effort low --dangerously-skip-permissions --output-format text`;
+    const psCommand = `if (Get-Command agy -ErrorAction SilentlyContinue) { Get-Content -Raw '${safePath}' | & agy --effort low --dangerously-skip-permissions --output-format text } else { exit 127 }`;
     const { stdout } = await execFileAsync(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', psCommand],

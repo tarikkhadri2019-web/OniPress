@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Site } from '@/lib/db';
-import { Trash2, Globe, CheckCircle, AlertCircle, Loader2, Plus, Download } from 'lucide-react';
+import { Trash2, Globe, CheckCircle, AlertCircle, Loader2, Plus, Download, Edit2, Check, X } from 'lucide-react';
 
 type SiteStatus = 'unknown' | 'checking' | 'ok' | 'error';
 
@@ -17,6 +17,12 @@ export default function SiteManager() {
   const [token, setToken] = useState('');
   const [tags, setTags]   = useState('');
   const [adding, setAdding] = useState(false);
+
+  // Edit site state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editGscUrl, setEditGscUrl] = useState('');
+  const [editGa4PropertyId, setEditGa4PropertyId] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchSitesData = async () => {
     const res = await fetch('/api/sites');
@@ -54,6 +60,39 @@ export default function SiteManager() {
   const deleteSite = async (id: string) => {
     await fetch(`/api/sites?id=${id}`, { method: 'DELETE' });
     loadSites();
+  };
+
+  const startEdit = (site: Site) => {
+    setEditingId(site.id);
+    setEditGscUrl(site.gscUrl || '');
+    setEditGa4PropertyId(site.ga4PropertyId || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditGscUrl('');
+    setEditGa4PropertyId('');
+  };
+
+  const saveEdit = async (siteId: string) => {
+    setIsUpdating(true);
+    try {
+      await fetch('/api/sites', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: siteId,
+          gscUrl: editGscUrl.trim(),
+          ga4PropertyId: editGa4PropertyId.trim(),
+        }),
+      });
+      setEditingId(null);
+      loadSites();
+    } catch {
+      alert('Failed to update site configuration');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const verifySite = async (id: string) => {
@@ -176,14 +215,13 @@ export default function SiteManager() {
             </div>
           )}
 
-          <div className="space-y-2">
             {sites.map(site => (
               <div
                 key={site.id}
-                className="rounded-xl px-4 py-3 bg-white border border-slate-200 shadow-2xs"
+                className="rounded-xl p-4 bg-white border border-slate-200 shadow-2xs space-y-3"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <StatusIcon id={site.id} />
                     <div className="min-w-0">
                       <p className="font-bold text-sm text-slate-900 truncate">{site.name}</p>
@@ -191,6 +229,14 @@ export default function SiteManager() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => (editingId === site.id ? cancelEdit() : startEdit(site))}
+                      className="text-[11px] px-2.5 py-1 rounded-lg text-slate-600 hover:text-[#0047FF] hover:bg-[#0047FF]/10 transition-all border border-slate-200 font-semibold cursor-pointer flex items-center gap-1"
+                      title="Edit Telemetry & GA4"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      {editingId === site.id ? 'Cancel' : 'Edit'}
+                    </button>
                     <button
                       onClick={() => verifySite(site.id)}
                       className="text-[11px] px-2.5 py-1 rounded-lg text-slate-600 hover:text-[#0047FF] hover:bg-[#0047FF]/10 transition-all border border-slate-200 font-semibold cursor-pointer"
@@ -205,8 +251,88 @@ export default function SiteManager() {
                     </button>
                   </div>
                 </div>
+
+                {/* Telemetry Status Badges */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {site.ga4PropertyId ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#0047FF]/10 text-[#0047FF] border border-[#0047FF]/25">
+                      ● GA4: {site.ga4PropertyId}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => startEdit(site)}
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 cursor-pointer"
+                    >
+                      + Set GA4 Property ID
+                    </button>
+                  )}
+
+                  {site.gscUrl ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono text-slate-600 bg-slate-100 border border-slate-200">
+                      GSC: {site.gscUrl}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => startEdit(site)}
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 cursor-pointer"
+                    >
+                      + Set GSC URL
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline Edit Form */}
+                {editingId === site.id && (
+                  <div className="mt-3 p-3.5 rounded-xl bg-slate-50 border border-[#0047FF]/20 space-y-2.5">
+                    <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0047FF]" />
+                      Edit Google Telemetry for {site.name}
+                    </p>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase">GA4 Property ID (e.g. 123456789)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 123456789"
+                        value={editGa4PropertyId}
+                        onChange={e => setEditGa4PropertyId(e.target.value)}
+                        style={inputStyle}
+                      />
+                      <p className="text-[10px] text-slate-400">Numeric Property ID from Google Analytics Admin &rarr; Property Settings</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase">Google Search Console URL</label>
+                      <input
+                        type="text"
+                        placeholder="sc-domain:example.com or https://example.com/"
+                        value={editGscUrl}
+                        onChange={e => setEditGscUrl(e.target.value)}
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => saveEdit(site.id)}
+                        disabled={isUpdating}
+                        className="px-3 py-1.5 rounded-lg bg-[#0047FF] text-white text-xs font-bold hover:bg-[#0037cc] transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        Save Configuration
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-100 transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {Array.isArray(site.tags) && site.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
                     {site.tags.map(t => (
                       <span key={t} className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] rounded-full font-semibold border border-slate-200">
                         #{t}
@@ -216,7 +342,6 @@ export default function SiteManager() {
                 )}
               </div>
             ))}
-          </div>
         </div>
       </div>
     </div>

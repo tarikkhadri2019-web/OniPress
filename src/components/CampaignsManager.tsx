@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   Play, Pause, Plus, Target, Sparkles, Globe, Calendar, 
   CheckCircle2, AlertCircle, ExternalLink, Trash2, 
-  ChevronDown, ChevronUp, RefreshCw, Zap
+  ChevronDown, ChevronUp, RefreshCw, Zap, HelpCircle, Clock, Terminal
 } from 'lucide-react';
 import { Site, Campaign, TopicIdea } from '@/lib/db';
 
@@ -24,6 +24,11 @@ export default function CampaignsManager() {
   const [runningTopicId, setRunningTopicId] = useState<string | null>(null);
   const [generatingStatusMsg, setGeneratingStatusMsg] = useState('');
   const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
+
+  // Cron automation state
+  const [isTriggeringCron, setIsTriggeringCron] = useState(false);
+  const [cronMessage, setCronMessage] = useState<string | null>(null);
+  const [showCronGuide, setShowCronGuide] = useState(false);
 
   // Manual topic add form
   const [topicInputs, setTopicInputs] = useState<{ [campaignId: string]: { title: string; focusKeyword: string } }>({});
@@ -289,6 +294,27 @@ export default function CampaignsManager() {
     await saveCampaignToServer(updated);
   };
 
+  const handleTriggerCron = async () => {
+    setIsTriggeringCron(true);
+    setCronMessage('Evaluating active topic campaigns & running pipeline...');
+    try {
+      const res = await fetch('/api/cron', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setCronMessage(`Cron Execution Complete: Processed ${data.processed || 0} topic(s).`);
+        loadData();
+      } else {
+        setCronMessage(`Cron notice: ${data.error || data.message || 'No topics to process'}`);
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setCronMessage(`Cron run failed: ${msg}`);
+    } finally {
+      setIsTriggeringCron(false);
+      setTimeout(() => setCronMessage(null), 6000);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -299,7 +325,24 @@ export default function CampaignsManager() {
             Generate programmatic editorial clusters, manage topic pipelines, and sideload with zero manual copywriting.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowCronGuide(!showCronGuide)}
+            className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#0047FF]/40 text-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+            title="How Automated Cron Works"
+          >
+            <Clock className="w-3.5 h-3.5 text-[#0047FF]" />
+            How Cron Works
+          </button>
+          <button
+            onClick={handleTriggerCron}
+            disabled={isTriggeringCron}
+            className="px-3 py-1.5 rounded-lg bg-[#0047FF] hover:bg-[#0037cc] text-white text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            title="Trigger Scheduled Cron Pipeline Right Now"
+          >
+            <Zap className={`w-3.5 h-3.5 ${isTriggeringCron ? 'animate-bounce' : ''}`} />
+            {isTriggeringCron ? 'Running Pipeline…' : 'Run Cron Now'}
+          </button>
           <button
             onClick={loadData}
             disabled={isLoading}
@@ -308,12 +351,69 @@ export default function CampaignsManager() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#0047FF]' : ''}`} />
           </button>
-          <span className="text-xs px-3 py-1 rounded-full bg-[#0047FF]/10 text-[#0047FF] border border-[#0047FF]/20 font-bold flex items-center gap-1.5">
+          <span className="text-xs px-3 py-1.5 rounded-full bg-[#0047FF]/10 text-[#0047FF] border border-[#0047FF]/20 font-bold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#0047FF]" />
-            {campaigns.filter(c => c.status === 'Active').length} Active Campaigns
+            {campaigns.filter(c => c.status === 'Active').length} Active
           </span>
         </div>
       </div>
+
+      {/* Cron Notification Toast */}
+      {cronMessage && (
+        <div className="p-3.5 rounded-xl bg-slate-900 text-white text-xs font-mono flex items-center justify-between border border-slate-800 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#0047FF] animate-pulse" />
+            <span>{cronMessage}</span>
+          </div>
+          <button onClick={() => setCronMessage(null)} className="text-slate-400 hover:text-white text-xs">✕</button>
+        </div>
+      )}
+
+      {/* Educational Cron Setup Guide */}
+      {showCronGuide && (
+        <div className="p-5 rounded-2xl bg-white border border-[#0047FF]/20 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#0047FF]" />
+              How OniPress Automated Cron Works
+            </h3>
+            <button
+              onClick={() => setShowCronGuide(false)}
+              className="text-xs text-slate-400 hover:text-slate-700 font-semibold"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-600">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <span className="font-bold text-slate-900 block text-xs">1. Topic Cluster Queue</span>
+              <p>Each campaign holds a queue of topics with scheduled days (Day 1, Day 2, etc.) and target focus keywords.</p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <span className="font-bold text-slate-900 block text-xs">2. Automated Execution</span>
+              <p>When the cron runs, it picks up the next <strong>Pending</strong> topic in active campaigns, generates the 1,500+ word article, and sideloads it directly to WordPress.</p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <span className="font-bold text-slate-900 block text-xs">3. Fast Indexing & Sideload</span>
+              <p>Posts are marked as <strong>Published</strong> with their live URL and automatically forwarded to Google Search Console for fast indexing.</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1 border-t border-slate-100">
+            <span className="text-[11px] font-bold text-slate-800 uppercase block tracking-wide">
+              Automate via External Cron, GitHub Actions, or Windows Task Scheduler:
+            </span>
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800">
+              <Terminal className="w-4 h-4 text-[#0047FF] shrink-0" />
+              <span className="truncate">curl -X POST http://localhost:3000/api/cron</span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Tip: You can use free webhook schedulers like <strong>cron-job.org</strong> or <strong>EasyCron</strong> to trigger <code>/api/cron</code> daily or twice daily on your hosted OniPress server.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Launch New Campaign Form */}
       <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 shadow-2xs">

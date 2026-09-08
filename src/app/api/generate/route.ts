@@ -14,6 +14,7 @@ import {
   saveGscLog,
   isIndexingQuotaAvailable,
   DAILY_GOOGLE_INDEXING_QUOTA,
+  getSettings,
 } from '@/lib/db';
 import { submitToGoogleIndexing } from '@/lib/gsc';
 
@@ -92,7 +93,7 @@ async function generateIdeImage(
   const promptText = `Call generate_image tool with Prompt: 'Editorial cinematic 16:9 featured photograph of ${cleanSubject}, ultra-realistic, professional photography, 8k resolution, clean studio lighting, realistic depth of field', ImageName: '${slug.substring(0, 18)}', AspectRatio: '16:9'. Then find the generated image file and copy it to ${absTargetPath} using run_command.`;
 
   try {
-    const psCommand = `& agy -p "${promptText}" --dangerously-skip-permissions`;
+    const psCommand = `if (Get-Command agy -ErrorAction SilentlyContinue) { & agy -p "${promptText}" --dangerously-skip-permissions }`;
     await execFileAsync(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', psCommand],
@@ -467,37 +468,137 @@ function sanitizeAndEnforceSeo(
 // ─────────────────────────────────────────────────────────
 // API ROUTE HANDLER
 // ─────────────────────────────────────────────────────────
-// AGY CLI ENGINE — Uses Antigravity/Gemini Gmail Auth (No API Key Needed)
+// MULTI-ENGINE AI GENERATION (GEMINI REST API / OPENAI / OPENROUTER / AGY CLI)
 // ─────────────────────────────────────────────────────────
 async function generateWithAgy(systemPrompt: string, userPrompt: string): Promise<string> {
-  const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}\n\nCRITICAL: Return ONLY the raw JSON object. No markdown. No explanation. No code fences.`;
+  const settings = getSettings();
+  const geminiKey = (settings.geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+  const openaiKey = (settings.openaiApiKey || process.env.OPENAI_API_KEY || '').trim();
+  const openRouterKey = (settings.openRouterApiKey || process.env.OPENROUTER_API_KEY || '').trim();
 
-  // Pipe the prompt as STDIN to agy (no --print flag - pure stdin is the correct method)
-  // This is proven to work: (content) | agy --dangerously-skip-permissions --output-format text
+  // ── PROVIDER 1: Direct Google Gemini API (High-speed, 0 CLI dependencies) ──
+  if (geminiKey) {
+    try {
+      const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-pro'];
+      for (const model of modelsToTry) {
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [
+                    {
+                      text: `${systemPrompt}\n\n---\n\n${userPrompt}\n\nCRITICAL: Return ONLY a raw JSON object with title, content, seo_description, and focus_keyword. No markdown code blocks.`
+                    }
+                  ]
+                }
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                responseMimeType: 'application/json'
+              }
+            })
+          }
+        );
+
+        if (resp.ok) {
+          const data = await resp.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && text.trim()) return text.trim();
+        }
+      }
+    } catch (apiErr) {
+      console.warn('[OniPress Gemini REST API warning]', apiErr);
+    }
+  }
+
+  // ── PROVIDER 2: OpenAI API (gpt-4o-mini) ──
+  if (openaiKey) {
+    try {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `${userPrompt}\n\nReturn ONLY a raw JSON object with title, content, seo_description, focus_keyword.` }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return content.trim();
+      }
+    } catch (oErr) {
+      console.warn('[OniPress OpenAI API warning]', oErr);
+    }
+  }
+
+  // ── PROVIDER 3: OpenRouter API ──
+  if (openRouterKey) {
+    try {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openRouterKey}`,
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `${userPrompt}\n\nReturn ONLY a raw JSON object with title, content, seo_description, focus_keyword.` }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return content.trim();
+      }
+    } catch (orErr) {
+      console.warn('[OniPress OpenRouter API warning]', orErr);
+    }
+  }
+
+  // ── PROVIDER 4: Antigravity CLI (agy) via local shell (if installed) ──
+  const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}\n\nCRITICAL: Return ONLY the raw JSON object. No markdown. No explanation. No code fences.`;
   const tmpPath = join(tmpdir(), `onipress_${Date.now()}.txt`);
   writeFileSync(tmpPath, fullPrompt, 'utf8');
 
   try {
-    // Use PowerShell to pipe file content as stdin into agy with --effort low for fast generation
     const safePath = tmpPath.replace(/\\/g, '/');
-    const psCommand = `Get-Content -Raw '${safePath}' | & agy --effort low --dangerously-skip-permissions --output-format text`;
-    const { stdout, stderr } = await execFileAsync(
+    // Check if agy executable actually exists before executing to prevent unhandled CommandNotFoundException
+    const psCommand = `if (Get-Command agy -ErrorAction SilentlyContinue) { Get-Content -Raw '${safePath}' | & agy --effort low --dangerously-skip-permissions --output-format text } else { Write-Error 'AGY_NOT_IN_PATH'; exit 127 }`;
+    const { stdout } = await execFileAsync(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', psCommand],
       { timeout: 180_000, maxBuffer: 10 * 1024 * 1024, windowsHide: true }
     );
     const result = stdout.trim();
-    if (!result) {
-      throw new Error(`agy CLI returned empty output. Stderr: ${stderr || 'none'}`);
-    }
-    return result;
+    if (result) return result;
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error('[OniPress agy error]', errorMsg);
-    throw new Error(`Antigravity generation error: ${errorMsg}`);
+    console.warn('[OniPress agy CLI notice]', errorMsg);
   } finally {
     try { unlinkSync(tmpPath); } catch { }
   }
+
+  // ── ACTIONABLE FALLBACK ERROR ──
+  throw new Error(
+    "No active AI engine found. The Antigravity CLI ('agy') is not present in your system PATH, and no API Key has been configured yet. Please open Operator Settings (top-right avatar) and paste your free Google Gemini API Key from https://aistudio.google.com/app/apikey (or configure GEMINI_API_KEY in .env) to start autonomous generation immediately."
+  );
 }
 
 function parseAgyJson(text: string): { title: string; content: string; seo_description: string; focus_keyword: string } | null {

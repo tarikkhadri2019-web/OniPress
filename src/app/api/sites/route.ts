@@ -50,3 +50,33 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Failed to delete site' }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const data = await request.json();
+    if (!data.id) {
+      return NextResponse.json({ error: 'Site ID required' }, { status: 400 });
+    }
+
+    const sites = getSites();
+    const index = sites.findIndex(s => s.id === data.id);
+    if (index === -1) {
+      return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+    }
+
+    if (data.name !== undefined) sites[index].name = String(data.name).trim();
+    if (data.url !== undefined) sites[index].url = String(data.url).trim().replace(/\/+$/, '');
+    if (data.gscUrl !== undefined) sites[index].gscUrl = String(data.gscUrl).trim();
+    if (data.ga4PropertyId !== undefined) sites[index].ga4PropertyId = String(data.ga4PropertyId).trim();
+    if (data.tags !== undefined) sites[index].tags = data.tags;
+    if (data.applicationPassword !== undefined && data.applicationPassword.trim() !== '') {
+      sites[index].applicationPassword = String(data.applicationPassword).trim();
+    }
+
+    saveSites(sites);
+    return NextResponse.json(sites[index]);
+  } catch {
+    return NextResponse.json({ error: 'Failed to update site' }, { status: 500 });
+  }
+}
+
