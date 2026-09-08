@@ -420,8 +420,9 @@ function onipress_create_post($request) {
         if (!empty($request['featured_image_url']) && strpos($updated_content, $request['featured_image_url']) !== false) {
             $updated_content = str_replace($request['featured_image_url'], $new_media_url, $updated_content);
             $content_changed = true;
-        } else if (preg_match('/src="\/images\/[^"]+"/', $updated_content)) {
-            $updated_content = preg_replace('/src="\/images\/[^"]+"/', 'src="' . esc_url($new_media_url) . '"', $updated_content);
+        }
+        if (preg_match('/src="(?:\/images\/[^"]+|(?!\/\/|https?:\/\/)[^"]+)"/i', $updated_content)) {
+            $updated_content = preg_replace('/src="(?:\/images\/[^"]+|(?!\/\/|https?:\/\/)[^"]+)"/i', 'src="' . esc_url($new_media_url) . '"', $updated_content);
             $content_changed = true;
         }
 

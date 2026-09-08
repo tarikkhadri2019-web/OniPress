@@ -131,66 +131,32 @@ async function generateIdeImage(
 }
 
 // ─────────────────────────────────────────────────────────
-// YOUTUBE EMBED RESOLVER (WITH 24H IN-MEMORY CACHING)
-// Prevents redundant network scraping and protects against IP rate-limiting
 // ─────────────────────────────────────────────────────────
-const youtubeCache = new Map<string, { videoId: string; timestamp: number }>();
-const YOUTUBE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-
+// YOUTUBE EMBED RESOLVER (USER-PROVIDED ONLY, NATIVE GUTENBERG EMBED)
+// ─────────────────────────────────────────────────────────
 async function resolveYouTubeEmbed(
-  youtubeUrl?: string,
-  focusKeyword?: string,
-  topic?: string
+  youtubeUrl?: string
 ): Promise<{ embedHtml: string; videoId: string } | null> {
-  let videoId: string | null = null;
-
-  if (youtubeUrl && youtubeUrl.trim()) {
-    const match = youtubeUrl.trim().match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
-    if (match) {
-      videoId = match[1];
-    }
+  // ONLY use video if user explicitly provided a YouTube URL — NO automatic scraping or external query
+  if (!youtubeUrl || !youtubeUrl.trim()) {
+    return null;
   }
 
-  // If no user YouTube URL provided, check in-memory cache or query YouTube
-  if (!videoId) {
-    const query = (focusKeyword || topic || 'guide').trim().toLowerCase();
-    const cached = youtubeCache.get(query);
-    if (cached && Date.now() - cached.timestamp < YOUTUBE_CACHE_TTL) {
-      videoId = cached.videoId;
-    } else {
-      try {
-        const res = await fetch(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
-          signal: AbortSignal.timeout(6000),
-        });
-        if (res.ok) {
-          const text = await res.text();
-          const m = text.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
-          if (m) {
-            videoId = m[1];
-            youtubeCache.set(query, { videoId, timestamp: Date.now() });
-          }
-        }
-      } catch (e) {
-        console.warn('[OniPress YouTube auto-fetch warning]', e);
-      }
-    }
+  const cleanUrl = youtubeUrl.trim();
+  const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  if (!match) {
+    return null;
   }
 
-  if (!videoId) return null;
+  const videoId = match[1];
+  const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-  const kw = focusKeyword || topic || 'Guide';
-  const embedHtml = `
-<!-- wp:embed {"url":"https://www.youtube.com/watch?v=${videoId}","type":"video","providerNameSlug":"youtube","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
-<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio" style="margin:32px 0;">
-  <div class="wp-block-embed__wrapper" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
-    <iframe style="position:absolute; top:0; left:0; width:100%; height:100%; border:0; border-radius:12px;" src="https://www.youtube.com/embed/${videoId}" title="In-Depth Video Guide: ${kw.replace(/"/g, '&quot;')}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
-  </div>
-  <figcaption style="font-size:13px; color:#6b7280; text-align:center; margin-top:10px;">Recommended Video: Comprehensive walkthrough on <strong>${kw}</strong></figcaption>
-</figure>
+  // Native WordPress Gutenberg Core YouTube Embed Block (100% block-validator compliant)
+  // Exactly matches the Gutenberg block format created when using the "+" menu -> "YouTube"
+  const embedHtml = `<!-- wp:embed {"url":"${canonicalUrl}","type":"video","providerNameSlug":"youtube","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
+<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+${canonicalUrl}
+</div></figure>
 <!-- /wp:embed -->`;
 
   return { embedHtml, videoId };
@@ -348,10 +314,23 @@ function sanitizeAndEnforceSeo(
   const escKw = focusKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const effectiveImageUrl = customImageUrl || `https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80`;
 
-  // Fix any existing img tags that lack focus keyword in alt or have placeholder src
+  // Fix ANY existing img tags: AI models often hallucinate fake filenames (e.g. "gps_tracking.jpg", relative paths, or empty src)
   if (html.includes('<img')) {
-    html = html.replace(/<img([^>]*?)src=["'](?:placeholder\.jpg|image\.(?:jpg|png)|#|blob:[^"']*)?["']([^>]*)>/gi, `<img$1src="${effectiveImageUrl}"$2>`);
+    // Replace any src that is NOT a valid remote HTTP/HTTPS URL (or if it's a dummy domain/placeholder)
+    html = html.replace(/<img([^>]*?)src=["']([^"']*)["']([^>]*)>/gi, (match, before, srcVal, after) => {
+      const isRemoteValid = (srcVal.startsWith('http://') || srcVal.startsWith('https://')) && !srcVal.includes('example.com') && !srcVal.includes('placeholder');
+      const finalSrc = isRemoteValid ? srcVal : effectiveImageUrl;
+      return `<img${before}src="${finalSrc}"${after}>`;
+    });
+
+    // Ensure all <img> tags have alt containing the primary focus keyword
     html = html.replace(/<img((?![^>]*\balt=)[^>]*?)>/gi, `<img alt="${focusKeyword}"$1>`);
+    html = html.replace(/<img([^>]*?\balt=["'])([^"']*)(["'][^>]*?)>/gi, (match, prefix, altVal, suffix) => {
+      if (!altVal.toLowerCase().includes(focusKeyword.toLowerCase())) {
+        return `${prefix}${focusKeyword} - ${altVal.trim() || 'overview'}${suffix}`;
+      }
+      return match;
+    });
   }
 
   const hasAltImage = new RegExp(`<img[^>]+alt=["'][^"']*${escKw}[^"']*["']`, 'i').test(html);
@@ -748,8 +727,8 @@ Generate a comprehensive, high-ranking article:
       resolvedImageUrl = `https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80`;
     }
 
-    // 4b. Resolve YouTube Embed (User-provided URL or auto-fetched top ranking YouTube video)
-    const youtubeData = await resolveYouTubeEmbed(youtubeUrl, activeFocusKeyword, prompt);
+    // 4b. Resolve YouTube Embed (User-provided URL only)
+    const youtubeData = await resolveYouTubeEmbed(youtubeUrl);
 
     // 5. Enforce RankMath SEO & Sanitize (with backlinks, inline image with alt, and YouTube embed guaranteed)
     const cleanedContent = sanitizeAndEnforceSeo(
@@ -777,7 +756,7 @@ Generate a comprehensive, high-ranking article:
       focus_keyword: activeFocusKeyword,
       seo_description: generatedPost.seo_description,
       featured_image_base64: imageBase64,
-      featured_image_url: resolvedImageUrl.startsWith('http') ? resolvedImageUrl : undefined,
+      featured_image_url: resolvedImageUrl || undefined,
       idempotency_key: idempotencyKey,
     };
 
